@@ -5,7 +5,8 @@ source goes to the public repo; run it by hand any time:
     python tools/privacy_check.py        (exit 1 and a list of file:line if anything is found)
 
 Binary files (images, fonts) are skipped; the patterns are generic, so nothing private is written
-here either."""
+here either. Files marked export-ignore in .gitattributes are skipped too: git archive leaves them out,
+so they never reach the public repo (e.g. installer/winget, build tooling)."""
 import re
 import subprocess
 import sys
@@ -14,7 +15,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PATTERNS = [
     ("a personal user path", re.compile(r"[A-Za-z]:[\\/]+Users[\\/]+(?!Public\b|<|%|\$|\{)[A-Za-z0-9_.-]+", re.I)),
-    ("a private network address", re.compile(r"\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}\b")),
+    # (not right after "Version: ": a Windows version number there is not an address)
+    ("a private network address",
+     re.compile(r"(?<!Version: )\b(?:10\.\d{1,3}|192\.168|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}\b")),
     ("a tailnet name", re.compile(r"\btailscale\b|\.ts\.net\b", re.I)),
     ("a home-lab hostname", re.compile(r"\bnexus(?:-config|\.)|\bhal9000\b|\bhal69000\b", re.I)),
     ("a personal domain", re.compile(r"darkrelay\.net", re.I)),
@@ -32,10 +35,22 @@ def tracked():
     return [p for p in out.decode("utf-8").split("\0") if p]
 
 
+def export_ignored(paths):
+    """The tracked files git archive leaves out (export-ignore): they never go public."""
+    if not paths:
+        return set()
+    out = subprocess.run(["git", "check-attr", "-z", "export-ignore", "--stdin"], cwd=ROOT, capture_output=True,
+                         check=True, input="\0".join(paths).encode("utf-8") + b"\0").stdout.decode("utf-8")
+    f = out.split("\0")
+    return {f[i] for i in range(0, len(f) - 2, 3) if f[i + 2] == "set"}
+
+
 def main():
     found = []
-    for rel in tracked():
-        if Path(rel).suffix.lower() in SKIP_SUFFIX or rel.startswith(SKIP_PREFIX):
+    files = tracked()
+    private = export_ignored(files)
+    for rel in files:
+        if Path(rel).suffix.lower() in SKIP_SUFFIX or rel.startswith(SKIP_PREFIX) or rel in private:
             continue
         try:
             text = (ROOT / rel).read_text(encoding="utf-8")

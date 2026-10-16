@@ -1,0 +1,2 @@
+# build tooling that never goes to the public repo (build.ps1 -Release uses git archive)
+installer/winget/** export-ignore

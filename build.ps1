@@ -23,6 +23,11 @@
 #                                       (their updater) and Lazarus-Setup.exe (old download links).
 #                                  The private working copy stays where it is (Forgejo); only this folder goes
 #                                  to GitHub, and only on a release.
+#                                    4. winget: updates DarkRelay.LazarusPDF in microsoft/winget-pkgs (a PR through
+#                                       wingetcreate, versioned installer URL); never fatal. -NoWinget skips it,
+#                                       -WingetDryRun builds and validates the manifests without submitting.
+#   .\build.ps1 -WingetOnly -Version x.y.z [-WingetDryRun]
+#                                  only step 4, for a release that is already published
 # Installing is Setup's job: there is no copy-to-a-folder install any more.
 # Needs a Python 3.11 venv with requirements.txt + requirements-build.txt installed (LAZARUS_PY = its
 # python.exe if it isn't .venv here).
@@ -35,8 +40,11 @@ param(
     [switch]$TestBuild,
     [string]$SetupDir = (Join-Path $env:USERPROFILE "LazarusPDF-Setup"),
     [string]$PublicDir = (Join-Path $env:LOCALAPPDATA "LazarusPDF-public\LazarusPDF"),
-    [switch]$FreshPublicHistory     # -Release only, once, deliberately: the public repo restarts from this release's
+    [switch]$FreshPublicHistory,    # -Release only, once, deliberately: the public repo restarts from this release's
                                     # single commit (force-pushed), dropping whatever history it had
+    [switch]$NoWinget,              # -Release: skip the winget update
+    [switch]$WingetDryRun,          # -Release / -WingetOnly: build + validate the winget manifests, submit nothing
+    [switch]$WingetOnly             # only the winget step, for an already published -Version
 )
 $ErrorActionPreference = "Stop"
 # Python: $env:LAZARUS_PY, else .venv next to this script, else python on PATH
@@ -44,9 +52,90 @@ $py = if ($env:LAZARUS_PY) { $env:LAZARUS_PY }
       elseif (Test-Path (Join-Path $PSScriptRoot ".venv\Scripts\python.exe")) { Join-Path $PSScriptRoot ".venv\Scripts\python.exe" }
       else { "python" }
 $ReleasesRepo = "Crazy8697/LazarusPDF"
+
+# ---- winget: DarkRelay.LazarusPDF in microsoft/winget-pkgs (never fatal: the GitHub release stands) ----
+# Nothing here starts a program or opens a window: no installer is run, wingetcreate gets --no-open with
+# --submit (the only time it would open a browser), and its GitHub token comes from WINGET_CREATE_GITHUB_TOKEN
+# (gh auth token, at run time, never stored or printed) so it never asks for a login; without a token
+# wingetcreate isn't run at all.
+#   in winget already  -> wingetcreate update (versioned installer URL), manifests in -SetupDir\winget-<ver>,
+#                         winget validate, then the PR (--submit) unless -WingetDryRun
+#   not in winget yet  -> installer\winget\*.yaml filled in for this version and validated; the first
+#                         submission is made by hand, so nothing is submitted
+function Update-Winget([string]$ver, [switch]$DryRun) {
+    $ErrorActionPreference = "Continue"
+    $id = "DarkRelay.LazarusPDF"
+    $asset = "LazarusPDF-Setup-$ver.exe"
+    $url = "https://github.com/$ReleasesRepo/releases/download/v$ver/$asset"
+    $outDir = Join-Path $SetupDir "winget-$ver"
+    try {
+        Remove-Item $outDir -Recurse -Force -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Force $outDir | Out-Null
+        # the release must be published, with the versioned installer and its published hash
+        $rel = (cmd /c "gh api repos/$ReleasesRepo/releases/tags/v$ver 2>nul") -join "`n"
+        if ($LASTEXITCODE -ne 0 -or -not $rel) { Write-Warning "winget: release v$ver isn't on $ReleasesRepo; skipped"; return }
+        $relObj = $rel | ConvertFrom-Json
+        $a = $relObj.assets | Where-Object { $_.name -eq $asset }
+        if (-not $a -or -not $a.digest) { Write-Warning "winget: $asset (or its digest) isn't on the release; skipped"; return }
+        $sha = ($a.digest -replace '^sha256:', '').ToUpper()
+        $date = ([datetime]$relObj.published_at).ToString("yyyy-MM-dd")
+        $winget = (Get-Command winget -ErrorAction SilentlyContinue).Source
+        cmd /c "gh api repos/microsoft/winget-pkgs/contents/manifests/d/DarkRelay/LazarusPDF >nul 2>&1"
+        $listed = $LASTEXITCODE -eq 0
+        if (-not $listed) {
+            $dir = Join-Path $outDir "manifests\d\DarkRelay\LazarusPDF\$ver"
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            foreach ($f in Get-ChildItem (Join-Path $PSScriptRoot "installer\winget") -Filter "*.yaml") {
+                $t = [IO.File]::ReadAllText($f.FullName).Replace("{{VERSION}}", $ver).Replace("{{SHA256}}", $sha).Replace("{{DATE}}", $date)
+                [IO.File]::WriteAllText((Join-Path $dir $f.Name), $t, (New-Object Text.UTF8Encoding $false))
+            }
+            if ($winget) {
+                $v = cmd /c "`"$winget`" validate --manifest `"$dir`" --disable-interactivity 2>&1"
+                Write-Host ("winget: validate: " + (($v | Where-Object { $_ -match '\S' }) -join " "))
+            }
+            Write-Host "winget: $id isn't in microsoft/winget-pkgs yet. The first submission is made by hand; manifests for $ver are in $dir (nothing submitted)."
+            return
+        }
+        $wc = (Get-Command wingetcreate -ErrorAction SilentlyContinue).Source
+        if (-not $wc) { $wc = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\wingetcreate.exe" }
+        if (-not (Test-Path $wc)) { Write-Warning "winget: wingetcreate isn't installed (winget install Microsoft.WingetCreate); skipped"; return }
+        $tok = (cmd /c "gh auth token 2>nul") -join ""
+        if ($LASTEXITCODE -ne 0 -or -not $tok.Trim()) { Write-Warning "winget: no GitHub token from gh auth token; skipped (wingetcreate would ask for a login)"; return }
+        $wargs = @("update", $id, "--version", $ver, "--urls", $url, "--release-date", $date,
+                   "--release-notes-url", "https://github.com/$ReleasesRepo/releases/tag/v$ver", "--out", $outDir)
+        # (--no-open always goes with --submit: the PR page never opens in a browser)
+        if (-not $DryRun) { $wargs += @("--submit", "--no-open", "--prtitle", "New version: $id version $ver") }
+        $env:WINGET_CREATE_GITHUB_TOKEN = $tok.Trim()
+        try {
+            $o = & $wc @wargs 2>&1
+            $code = $LASTEXITCODE
+        } finally {
+            Remove-Item Env:\WINGET_CREATE_GITHUB_TOKEN -ErrorAction SilentlyContinue
+            $tok = $null
+        }
+        $o | Where-Object { $_ -match '\S' } | ForEach-Object { Write-Host "wingetcreate: $_" }
+        if ($code -ne 0) { Write-Warning "winget: wingetcreate update failed ($code); the GitHub release stands, nothing rolled back"; return }
+        $inst = Get-ChildItem $outDir -Recurse -Filter "$id.installer.yaml" | Select-Object -First 1
+        if (-not $inst -or -not ((Get-Content $inst.FullName -Raw) -match [regex]::Escape($sha))) {
+            Write-Warning "winget: the updated manifest's InstallerSha256 isn't the release's ($sha); check $outDir"
+        }
+        if ($winget -and $inst) {
+            $v = cmd /c "`"$winget`" validate --manifest `"$($inst.DirectoryName)`" --disable-interactivity 2>&1"
+            Write-Host ("winget: validate: " + (($v | Where-Object { $_ -match '\S' }) -join " "))
+        }
+        Write-Host ("winget: " + $(if ($DryRun) { "dry run, nothing submitted; manifests in $outDir" } else { "update for $ver submitted to microsoft/winget-pkgs" }))
+    } catch {
+        Write-Warning "winget: $($_.Exception.Message); the GitHub release stands, nothing rolled back"
+    }
+}
 Push-Location $PSScriptRoot
 try {
     $ver = (Select-String -Path (Join-Path $PSScriptRoot "lazaruspdf\__init__.py") -Pattern '__version__ = "([^"]+)"').Matches[0].Groups[1].Value
+    if ($WingetOnly) {
+        if (-not $Version) { throw "-WingetOnly needs -Version x.y.z (a published release)." }
+        Update-Winget $Version -DryRun:$WingetDryRun
+        return
+    }
     if ($Release) {
         if ($TestBuild) { throw "-Release never publishes a test build." }
         if ($Version -ne $ver) { throw "-Version '$Version' doesn't match lazarus.__version__ ($ver)." }
@@ -174,6 +263,9 @@ try {
                 --repo $ReleasesRepo --target $commit --title "Lazarus PDF $ver" --notes-file $notes
             if ($LASTEXITCODE -ne 0) { throw "gh release create failed ($LASTEXITCODE)" }
             Write-Host "Released v$ver on $ReleasesRepo (source commit $commit)"
+
+            # 3. winget (never fatal)
+            if ($NoWinget) { Write-Host "winget: skipped (-NoWinget)" } else { Update-Winget $ver -DryRun:$WingetDryRun }
         }
     }
 } finally { Pop-Location }
