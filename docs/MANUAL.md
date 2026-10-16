@@ -1,28 +1,28 @@
-# Lazarus manual
+# Lazarus PDF manual
 
-The full feature reference and developer notes, stage by stage. For installing, see the README. Everything runs on this computer; Lazarus writes no logs.
+The full feature reference and developer notes, stage by stage. For installing, see the README. Everything runs on this computer; Lazarus PDF writes no logs.
 
 ## Run
-- Installed: the Start-menu or desktop shortcut **Lazarus**. From source: `Lazarus.bat` in the source folder (uses `.venv` there, or the venv in `LAZARUS_VENV`).
+- Installed: the Start-menu or desktop shortcut **Lazarus PDF**. From source: `LazarusPDF.bat` in the source folder (uses `.venv` there, or the venv in `LAZARUS_VENV`).
 - Headless: `<venv>\Scripts\python.exe -m lazarus --cli IN.pdf OUTDIR`. Run it from the source folder. It prints counts only.
 
 ## What it does
 For each page it reads the PDF's text layer first. Pages with no usable layer go to OCR (Tesseract, English, deskew, column-aware).
 Ink that the layer doesn't cover is either kept as a figure or OCR'd. A gap means no text layer and OCR that's low-confidence or garbled.
-Lazarus never guesses at gap content, and it never modifies the original.
+Lazarus PDF never guesses at gap content, and it never modifies the original.
 
 Outputs go to the output folder (default `%USERPROFILE%\extract-out`), using the source's base name:
 `-review.html` (gaps highlighted, figures embedded, prev/next gap buttons), `-text.txt`, `-final.pdf`, `-gaps.txt`.
 
 ## One window, two modes
-Lazarus has a single main window with a **MODE** switcher at the top left: **PDF Editor** | **Extraction**.
+Lazarus PDF has a single main window with a **MODE** switcher at the top left: **PDF Editor** | **Extraction**.
 You can also switch from the **Mode** menu (between File and View), with Ctrl+Shift+1 or with Ctrl+Shift+2.
 Switching swaps the central area and shows only that mode's toolbars, side panels and menus.
 The hidden mode keeps its state (open PDF, page, zoom, unsaved edits), and its shortcuts are off.
 
 - At launch the window opens in PDF Editor mode with nothing over it. The import pop-up only opens when you ask for it.
 - The editor's MARKUP, EDIT and INSERT tool groups can be dragged by their dotted handle to reorder them. The order holds for the session.
-- **File › Settings…** (Ctrl+,) opens the Settings page (see below). **File › About Lazarus** shows the version.
+- **File › Settings…** (Ctrl+,) opens the Settings page (see below). **File › About Lazarus PDF** shows the version.
 - **File › Import PDF…** (Ctrl+I) is for extraction. The result lands in Extraction mode.
 - **File › Open PDF in Editor…** (Ctrl+O) is for viewing. The PDF opens in PDF Editor mode.
 - Dropping a PDF on the window opens it in the editor when you're in editor mode, and stages it in the import pop-up when you're in extraction mode.
@@ -66,7 +66,7 @@ The tool list lives in `TOOLS` in `lazarus/pdfeditor.py`. Icons come from QtAwes
 
 ## PDF Editor: editing and saving
 - **Originals are never written.** The PDF is read into memory and edited there; the file on disk stays exactly as it is.
-  Every PDF Lazarus opens (editor or extraction import) is registered as protected (`lazarus/protect.py`). Every write path checks it: editor saves, review files, all exports. Picking an original is refused with a message, and you're asked to choose another file. There is no backup folder and no overwrite option.
+  Every PDF Lazarus PDF opens (editor or extraction import) is registered as protected (`lazarus/protect.py`). Every write path checks it: editor saves, review files, all exports. Picking an original is refused with a message, and you're asked to choose another file. There is no backup folder and no overwrite option.
 - **Undo / redo:** PyMuPDF journalling. Every edit is one operation. Ctrl+Z / Ctrl+Y (or Ctrl+Shift+Z), also under Edit.
 - **Selection:** in Select mode, click-drag on a page selects text. Hit-testing uses PyMuPDF character geometry and works on rotated pages too. Ctrl+C copies.
   Edit › *Highlight selection (pipeline test)* is the one real edit until the markup tools arrive.
@@ -178,7 +178,7 @@ Implementation note: PyMuPDF 1.28's `new_page()`/`insert_pdf()` refuse to run on
 ## Page-content tools (stage 9b)
 - **Whiteout** (Edit group): drag a box; it is filled with the page's own background colour, sampled from the page right where you drop it (the dominant colour there, so text under it doesn't skew it: white, a cream scan, a coloured form box). Override the colour in Properties, or "Sample the page colour again". It covers content visually; it does not remove it (Redact, stage 10, does that).
 - **Image** (Insert group): pick a picture, then drag a box (keeps its proportions) or click (its own size). PNG and JPEG go in as they are; WebP, GIF, BMP, TIFF and other raster formats are decoded by Pillow first; **SVG is rasterised** by MuPDF at its own size and 300 dpi, so it is crisp at its intended size, and is a bitmap once placed. Move / resize with the 8 handles; opacity in Properties.
-- **Signature**: draw one (a signing pad) or import an image, then place it. Tick "Save to my signatures" to keep it for reuse (the button's menu lists saved ones; remove them there), or leave it unticked for a one-off. Saved signatures are PNGs in %APPDATA%\Lazarus\signatures on this computer only: never in the repo, never sent anywhere.
+- **Signature**: draw one (a signing pad) or import an image, then place it. Tick "Save to my signatures" to keep it for reuse (the button's menu lists saved ones; remove them there), or leave it unticked for a one-off. Saved signatures are PNGs in %APPDATA%\LazarusPDF\signatures on this computer only: never in the repo, never sent anywhere.
 - **Measure**: Distance (drag) draws a dimension line whose caption is the reading; Area (click the corners, double-click or Enter to finish) draws the polygon with its reading label. The scale is the PDF's own when the page declares one (a /VP viewport /Measure), else a manual **Calibrate scale** (drag along a known distance, type its real length and unit; holds for every page without its own scale, for this session), else the paper size in mm. Moving keeps a reading; resizing re-measures. Each measurement also carries a standard /Measure dictionary.
 - **Callout**: press on the spot to point at, drag to where the text box goes. A text box with a leader line and arrow; Properties sets box fill, border colour and width, text font, size and colour, the leader's end and the text. Moving or resizing the box keeps the tip on its spot.
 - Every placement, move, resize, restyle and delete is one undo step. All 9b ops are journal-safe (probed on the worst-case files, including a rotated page, in `oprules.py`): none needed snapshot-undo.
@@ -233,19 +233,19 @@ Implementation note: PyMuPDF 1.28's `new_page()`/`insert_pdf()` refuse to run on
 - **Plain text**: PyMuPDF's text per page in reading order (blocks top to bottom, left to right), with an optional "[Page N]" marker and a form feed between pages.
 - **HTML**: ONE self-contained file; each page as PyMuPDF lays it out (positioned text) on a white sheet, images inlined as data URIs (no folder next to it).
 - **Markdown**: headings from the stage 7a heading detection (font size / weight ranks; running headers left out), paragraphs from text blocks (a hyphen at a line end joins the word), bullet and numbered lists from their markers. Limits: no tables, no bold / italic inside paragraphs, images left out, multi-column pages may interleave.
-- **EPUB** (EPUB 3, reflowable, EbookLib): chapters from the top-level bookmarks, else the detected headings, else every 10 pages; headings, paragraphs and lists as in Markdown; embedded images carried; a page with no text (a scan without OCR) comes in as a picture of the page. Limits: a chapter starts at the top of its page; tables and multi-column layouts flow as plain text; reading order is PyMuPDF's. Checked with W3C EPUBCheck at test time only (`tools/epubcheck_dev.py --jar <epubcheck.jar> FILE.epub`): Lazarus doesn't need Java or EPUBCheck, and neither is in the repo or the build.
+- **EPUB** (EPUB 3, reflowable, EbookLib): chapters from the top-level bookmarks, else the detected headings, else every 10 pages; headings, paragraphs and lists as in Markdown; embedded images carried; a page with no text (a scan without OCR) comes in as a picture of the page. Limits: a chapter starts at the top of its page; tables and multi-column layouts flow as plain text; reading order is PyMuPDF's. Checked with W3C EPUBCheck at test time only (`tools/epubcheck_dev.py --jar <epubcheck.jar> FILE.epub`): Lazarus PDF doesn't need Java or EPUBCheck, and neither is in the repo or the build.
 - A PDF whose permissions forbid copying (opened without its owner password) can't be exported as text, HTML, Markdown or EPUB (the reason is shown); its PDF export follows the Save As rules. From a password-protected PDF the text formats warn first: they can't carry the password.
 
 ## Recent files and the Annotations panel (stage 18c)
 - **File › Open Recent**: the 10 PDFs most recently opened in the PDF Editor, newest first, as a pick list (file names; the full path as the tooltip). Nothing is ever reopened by itself: there is no session restore. A file that is no longer there shows greyed (kept, in case its drive comes back); if one vanishes between showing the menu and clicking it, it is taken off the list with a quiet status message. **Clear recent files** sits at the bottom.
-  - What feeds it: any PDF that opens as an editor tab, which is Open PDF (Ctrl+O), a PDF dropped on the window, a PDF given on the command line or handed over by another launch (double-clicking a PDF with Lazarus as the default reader), and Open Recent itself. Untitled documents (Paste Pages as New PDF, New PDF from Images, Scan) have no file and never count; neither does a PDF only read for Insert / Merge, nor an Extraction-mode import.
+  - What feeds it: any PDF that opens as an editor tab, which is Open PDF (Ctrl+O), a PDF dropped on the window, a PDF given on the command line or handed over by another launch (double-clicking a PDF with Lazarus PDF as the default reader), and Open Recent itself. Untitled documents (Paste Pages as New PDF, New PDF from Images, Scan) have no file and never count; neither does a PDF only read for Insert / Merge, nor an Extraction-mode import.
   - Stored in the user's own settings (QSettings key `recent_files`), like the rest of Settings.
 - **Annotations panel** (View › Annotations panel; a tab next to Pages and Bookmarks): every annotation of the active tab with its page, type and text where it has any: the text under a highlight / underline / strikeout, a note's or text box's text, a callout's text, a measurement's reading, a stamp's name, a link's target. Click an entry to go to it: the view scrolls it into view and selects it (links with the Link tool on). It refreshes itself shortly after any change (an edit, undo / redo, a page op, another tab); while hidden it reads nothing. View only: no export.
   - Listed: highlight, underline, strikeout, drawing, rectangle, ellipse, line, arrow, polygon, note, text box, stamp, whiteout, image, signature, distance, area, callout, redaction mark, link. Not listed: form fields (fields, not annotations; Edit fields works with them), a note's popup (part of its note), an area's reading label (the reading shows on the area's entry).
 
 ## Scanning (stage 15)
 - **File › Scan…** scans pages into a NEW PDF. It opens as a new tab, unsaved, like Images to PDF. **Insert › Scan as Pages…** scans into the open PDF at a position you pick (one undo step).
-- Scanners are reached through Windows' own WIA (no TWAIN, nothing extra to install). Lazarus has its own dialog:
+- Scanners are reached through Windows' own WIA (no TWAIN, nothing extra to install). Lazarus PDF has its own dialog:
   - pick the scanner (the last one used is picked again; Refresh); if none is found it says why that usually happens
   - only what the scanner reports is offered: flatbed, feeder and duplex; colour, greyscale or black and white; its resolutions (300 dpi by default); page sizes that fit it; brightness and contrast if it has them
   - "Advanced…" opens the scanner's own Windows dialog for devices that need it
@@ -285,10 +285,10 @@ Implementation note: PyMuPDF 1.28's `new_page()`/`insert_pdf()` refuse to run on
 - The comparison runs in a separate process with progress and Cancel, so the window stays responsive. The marks are view-only: they never touch either document (no undo steps). Results clear when either document is edited; Compare runs it again.
 
 ## Default PDF reader (stage 12)
-- **Settings › Default PDF reader**: "Make Lazarus the default PDF reader…" registers Lazarus for .pdf for your Windows account only (no admin rights). It writes its own ProgID `Lazarus.PDF` (name, icon, open command), an entry in "Open with", and the Capabilities that Settings › Default apps lists.
-- Windows 10/11 does NOT let a program make itself the default. After registering, Lazarus opens the Default apps page, where you pick Lazarus for .pdf yourself, and it says so. Until then, double-clicked PDFs still go to the old default, and "Open with › Lazarus" works at once. The Settings section shows which of these states you're in.
-- "Remove Lazarus's registration" takes out exactly what Lazarus added. It never touches another program's settings or .pdf's own default.
-- **One Lazarus at a time.** A double-clicked PDF (or `Lazarus.exe file.pdf`) while Lazarus runs opens as a new tab in that window, which comes to the front. No second window starts.
+- **Settings › Default PDF reader**: "Make Lazarus PDF the default PDF reader…" registers Lazarus PDF for .pdf for your Windows account only (no admin rights). It writes its own ProgID `LazarusPDF.PDF` (name, icon, open command), an entry in "Open with", and the Capabilities that Settings › Default apps lists.
+- Windows 10/11 does NOT let a program make itself the default. After registering, Lazarus PDF opens the Default apps page, where you pick Lazarus PDF for .pdf yourself, and it says so. Until then, double-clicked PDFs still go to the old default, and "Open with › Lazarus PDF" works at once. The Settings section shows which of these states you're in.
+- "Remove Lazarus PDF's registration" takes out exactly what Lazarus PDF added. It never touches another program's settings or .pdf's own default.
+- **One Lazarus PDF at a time.** A double-clicked PDF (or `LazarusPDF.exe file.pdf`) while Lazarus PDF runs opens as a new tab in that window, which comes to the front. No second window starts.
   - If that PDF is already open, its tab is brought forward instead.
   - Several at once each become a tab, in order. They wait if the window is busy, e.g. building a find index.
   - Opening is view-only as always: the original is never written.
@@ -310,42 +310,42 @@ Changes apply on OK or Apply. Restore Defaults refills the form, and nothing is 
 - **Output:** the default output folder, which is where extraction writes and what the import pop-up starts with. Also what Ctrl+S / Save does: save in place, or Save As… (pick a folder, then keep saving there). Review › Save in place and Save As… (Ctrl+Shift+S) are always available too.
 - **Extraction / gaps:** the unfilled and filled gap highlight colours. They re-colour the open editor immediately, and the text colour adjusts to stay readable. Custom colours also apply to the written review HTML and PDF (the defaults keep the built-in look). The export page-headings toggle also lives here.
 - **View / zoom:** the zoom a PDF opens at in the editor (Fit width, Fit page, or 50–200%).
-- Settings live in `HKCU\Software\Lazarus\Lazarus`, the same QSettings store as before. Setting `LAZARUS_SETTINGS_INI=<file>` uses an INI file instead; tests and `--selftest` do this.
+- Settings live in `HKCU\Software\LazarusPDF\LazarusPDF`, the same QSettings store as before. Setting `LAZARUS_SETTINGS_INI=<file>` uses an INI file instead; tests and `--selftest` do this.
 ## Setup
 - Tesseract 5.4.0 at `C:\Program Files\Tesseract-OCR` (UB-Mannheim build, eng + osd)
 - A Python 3.11 venv (`.venv` in the source folder, or set `LAZARUS_VENV` / `LAZARUS_PY`): `python -m pip install -r requirements.txt`
-- `lazarus/tess.py` finds Tesseract in this order: `LAZARUS_TESSERACT`, a bundled `tesseract\` folder, Program Files, LocalAppData, then PATH.
+- `lazaruspdf/tess.py` finds Tesseract in this order: `LAZARUS_TESSERACT`, a bundled `tesseract\` folder, Program Files, LocalAppData, then PATH.
 
 ## Standalone .exe (onedir)
 - One-time setup: `pip install -r requirements-build.txt` into the venv.
-- `.\build.ps1` builds `dist\Lazarus\Lazarus.exe` (~376 MB folder). `dist\` and `build\` are gitignored.
+- `.\build.ps1` builds `dist\LazarusPDF\LazarusPDF.exe` (~376 MB folder). `dist\` and `build\` are gitignored.
 - Installing is Setup's job (see below): the old copy-to-a-folder `-Install` switch is gone.
-- `.\build.ps1 -SelfTest <test.pdf>` runs the frozen exe's self-test. You can also run `Lazarus.exe --selftest report.json test.pdf workdir` directly.
+- `.\build.ps1 -SelfTest <test.pdf>` runs the frozen exe's self-test. You can also run `LazarusPDF.exe --selftest report.json test.pdf workdir` directly.
   - It runs offscreen and checks the bundled Tesseract, qtawesome fonts, the docx template, the icon, extraction with OCR, all six exports and all three modes.
 - What the spec bundles:
   - Tesseract goes into `_internal\tesseract`, but only the 26 DLLs `tesseract.exe` actually imports (`tools/tess_deps.py`), plus eng + osd tessdata.
-  - It drops OpenCV's ffmpeg DLL and Qt's Quick/QML/PDF/Network/OpenGL pieces, none of which Lazarus loads.
+  - It drops OpenCV's ffmpeg DLL and Qt's Quick/QML/PDF/Network/OpenGL pieces, none of which Lazarus PDF loads.
 - Onedir rather than one-file: it starts quickly and runs Tesseract from a fixed folder.
   - A one-file exe would unpack ~376 MB to %TEMP% on every launch. That's slow, antivirus-unfriendly, and Tesseract would run out of a temp dir.
 
 ## Updates (stage 19b)
-- At startup (File › Settings › Updates › "Check for updates at startup", on by default) Lazarus asks GitHub for the latest release of Crazy8697/Lazarus, in the background a few seconds after the window is up: the launch isn't delayed, nothing takes the focus, and any failure (offline, rate limit, a bad reply) stays silent. **Help › Check for updates…** checks by hand and always says how it went.
+- At startup (File › Settings › Updates › "Check for updates at startup", on by default) Lazarus PDF asks GitHub for the latest release of Crazy8697/LazarusPDF, in the background a few seconds after the window is up: the launch isn't delayed, nothing takes the focus, and any failure (offline, rate limit, a bad reply) stays silent. **Help › Check for updates…** checks by hand and always says how it went.
 - A newer version shows a bar at the top of the window (not a pop-up): the version, **Release notes**, **Download and install**, **Skip this version** (remembered; a newer one still shows) and **Later**.
-- Download and install: the installer is downloaded to %TEMP% with progress and Cancel and must match the release's published SHA-256 (`.sha256` asset); a missing or wrong checksum is refused. Unsaved work is asked about first (Save / Discard / Cancel; never saved by itself). Then Setup starts (one UAC prompt), Lazarus closes, the installation is upgraded in place and Lazarus starts again. A source run (venv, Lazarus.bat, the dev shortcut) checks but never installs.
-- Privacy: the only network requests are GitHub's latest-release lookup (`/repos/Crazy8697/Lazarus/releases/latest`) and, if you choose to update, the installer and checksum download. No telemetry, no IDs, nothing about your files or settings.
+- Download and install: the installer is downloaded to %TEMP% with progress and Cancel and must match the release's published SHA-256 (`.sha256` asset); a missing or wrong checksum is refused. Unsaved work is asked about first (Save / Discard / Cancel; never saved by itself). Then Setup starts (one UAC prompt), Lazarus PDF closes, the installation is upgraded in place and Lazarus PDF starts again. A source run (venv, LazarusPDF.bat, the dev shortcut) checks but never installs.
+- Privacy: the only network requests are GitHub's latest-release lookup (`/repos/Crazy8697/LazarusPDF/releases/latest`) and, if you choose to update, the installer and checksum download. No telemetry, no IDs, nothing about your files or settings.
 - Dev / test hooks (never set in normal use): `LAZARUS_UPDATE_URL` points the check at another URL (a local mock server), `LAZARUS_UPDATE_TIMEOUT` sets the network timeout in seconds, `LAZARUS_UPDATE_DRYRUN=<file>` writes the Setup command line there instead of starting it, `LAZARUS_UPDATE_TEST_ACTION=install` answers the update bar with Download and install (scripted upgrade tests).
 
 ## Windows installer (stage 19)
-- `.\build.ps1 -Setup` builds, then packages `dist\Lazarus` with Inno Setup 6 (`installer\lazarus.iss`) into `%USERPROFILE%\Lazarus-Setup\Lazarus-Setup-<version>.exe` plus its `.sha256` (outside the repo; never committed). `-Setup -NoBuild` packages the existing build; `-Setup -TestBuild` makes a "Lazarus Test" installer with its own AppId, folder and shortcut names, so tests never touch a real installation.
-- `.\build.ps1 -Release -Version x.y.z` publishes: it refuses unless the git tree is clean, x.y.z is `lazarus.__version__`, `installer\release-notes\vx.y.z.md` exists and the tag isn't on GitHub yet; then it builds the Setup and `.sha256` and creates release vx.y.z on the public, releases-only repo **Crazy8697/Lazarus** (gh CLI) with both attached. Source code never goes to GitHub; it stays on Forgejo. Inno Setup is a build tool only (found through its own uninstall registration, or `LAZARUS_ISCC`); nothing of it ships.
+- `.\build.ps1 -Setup` builds, then packages `dist\LazarusPDF` with Inno Setup 6 (`installer\lazaruspdf.iss`) into `%USERPROFILE%\LazarusPDF-Setup\LazarusPDF-Setup-<version>.exe` plus its `.sha256` (outside the repo; never committed). `-Setup -NoBuild` packages the existing build; `-Setup -TestBuild` makes a "Lazarus PDF Test" installer with its own AppId, folder and shortcut names, so tests never touch a real installation.
+- `.\build.ps1 -Release -Version x.y.z` publishes: it refuses unless the git tree is clean, x.y.z is `lazarus.__version__`, `installer\release-notes\vx.y.z.md` exists and the tag isn't on GitHub yet; then it builds the Setup and `.sha256` and creates release vx.y.z on the public, releases-only repo **Crazy8697/LazarusPDF** (gh CLI) with both attached. Source code never goes to GitHub; it stays on Forgejo. Inno Setup is a build tool only (found through its own uninstall registration, or `LAZARUS_ISCC`); nothing of it ships.
 - Setup installs to Program Files (64-bit) with one UAC prompt: a Start-menu shortcut, a desktop shortcut (checkbox, on by default), and an Apps / Add or Remove Programs entry (name, version, publisher, icon). The version is `lazarus.__version__`, the same one the About box shows.
-- **Set Lazarus as my default PDF reader** (checkbox, off by default) runs the installed `Lazarus.exe --register-default` as the user who started Setup (unelevated, so it lands in that user's HKCU): the same per-user registration as Settings › Default PDF reader, then Settings › Default apps opens for the user to confirm. Nothing is made default silently.
-- **Launch Lazarus** on the last page starts it unelevated.
-- Uninstall removes the program files, the shortcuts and the Apps entry, and runs `Lazarus.exe --unregister-default`: the .pdf registration is removed exactly as Settings › Remove does, and only if it points at this install. User data stays: settings and the recent-files list (HKCU\Software\Lazarus\Lazarus), saved signatures (%APPDATA%\Lazarus\signatures), and every output folder.
-- Updates from inside Lazarus (stage 19b) start this Setup with `/SILENT /SP- /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1`: the same AppId upgrades the installation in place (one UAC prompt; settings, shortcuts and the .pdf registration stay; the default-reader step isn't repeated) and `/RELAUNCH=1` starts Lazarus again afterwards as the original, unelevated user.
+- **Set Lazarus PDF as my default PDF reader** (checkbox, off by default) runs the installed `LazarusPDF.exe --register-default` as the user who started Setup (unelevated, so it lands in that user's HKCU): the same per-user registration as Settings › Default PDF reader, then Settings › Default apps opens for the user to confirm. Nothing is made default silently.
+- **Launch Lazarus PDF** on the last page starts it unelevated.
+- Uninstall removes the program files, the shortcuts and the Apps entry, and runs `LazarusPDF.exe --unregister-default`: the .pdf registration is removed exactly as Settings › Remove does, and only if it points at this install. User data stays: settings and the recent-files list (HKCU\Software\LazarusPDF\LazarusPDF), saved signatures (%APPDATA%\LazarusPDF\signatures), and every output folder.
+- Updates from inside Lazarus PDF (stage 19b) start this Setup with `/SILENT /SP- /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1`: the same AppId upgrades the installation in place (one UAC prompt; settings, shortcuts and the .pdf registration stay; the default-reader step isn't repeated) and `/RELAUNCH=1` starts Lazarus PDF again afterwards as the original, unelevated user.
 - Program Files is read-only for the program: nothing is written next to the exe (settings in the registry, signatures in %APPDATA%, temporary files in %TEMP%, outputs where the user chooses). The self-test checks it (`install_folder_untouched`). `tools/run_unelevated.py` runs a command de-elevated (the `runas /trustlevel:0x20000` token at Medium integrity, hidden) for testing an installed copy from an elevated shell.
 ## Extraction: Searchable PDF and Rebuilt pages (stage 21)
-Both come from Extraction's **Export ▾** menu and use your CORRECTED review text: every word you changed and every gap you filled in. Both write a NEW PDF at a location you choose (the original, or any protected file, is refused), run in the background with progress and Cancel (a cancelled run writes nothing), and ask first if gaps are still open. They need the original PDF again: Lazarus remembers it from the import (and its password, in memory only); a review opened another way asks where the original is.
+Both come from Extraction's **Export ▾** menu and use your CORRECTED review text: every word you changed and every gap you filled in. Both write a NEW PDF at a location you choose (the original, or any protected file, is refused), run in the background with progress and Cancel (a cancelled run writes nothing), and ask first if gaps are still open. They need the original PDF again: Lazarus PDF remembers it from the import (and its password, in memory only); a review opened another way asks where the original is.
 - **Searchable PDF…** (`-searchable.pdf`): the original pages exactly as they look, with your corrected text as an invisible, selectable, searchable layer behind them. Tesseract reads each page as displayed (the same engine and code as Document › OCR page, `lazarus/ocrlayer.py`), and your text is lined up with its words: an unchanged word keeps its exact position, a corrected word or filled gap sits where the word(s) it replaces are, text with nothing readable under it goes right after the word before it. Pages without a text layer (scans) get the corrected text for the whole page. Pages that already have a real text layer keep it untouched; only what Extraction had to OCR on them (pictures of text, the words the layer doesn't cover) gets your corrected text added. Open gaps carry no text. The output isn't encrypted.
 - **Rebuilt pages…** (`-rebuilt.pdf`): a brand-new, clean PDF typeset from your corrected text, no scan images. Each original page becomes a page of the same size (more if its text runs over); 0.75 inch margins; 11 pt serif text (Windows' Times New Roman, embedded as a subset, else the built-in Times) at 1.38 line spacing; your paragraphs in order with a small gap between them, each original page starting a new page; the figures Extraction kept (pictures and drawings) centred where they came, at their printed size; open gaps show as their fill-in marker. The text is placed word by word, so it selects and searches exactly as typed.
 

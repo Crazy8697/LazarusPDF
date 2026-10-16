@@ -1,6 +1,6 @@
 """DEV / TEST ONLY: validate exported EPUBs with W3C EPUBCheck (stage 18b).
 
-Not used by Lazarus, its build or its self-test: EPUB export has no Java or EPUBCheck
+Not used by Lazarus PDF, its build or its self-test: EPUB export has no Java or EPUBCheck
 dependency. The EPUBCheck jar (and Java) live outside the repo, e.g. in a scratch folder.
 
     python tools/epubcheck_dev.py --jar <path to epubcheck.jar> FILE.epub [FILE.epub ...]
@@ -45,7 +45,7 @@ def main():
     a = ap.parse_args()
     java = find_java()
     if not java:
-        sys.exit("No Java found (EPUBCheck needs a Java runtime; Lazarus itself doesn't).")
+        sys.exit("No Java found (EPUBCheck needs a Java runtime; Lazarus PDF itself doesn't).")
     bad = 0
     for e in a.epubs:
         counts, msgs = check(java, a.jar, e)

@@ -1,4 +1,4 @@
-# Files fed to Lazarus are private. Nothing processed, and no output, is ever committed.
+# Files fed to Lazarus PDF are private. Nothing processed, and no output, is ever committed.
 in/
 out/
 extract-out/
@@ -21,5 +21,5 @@ __pycache__/
 *-edited-*.pdf
 
 # saved signatures live in the app-data folder; never in the repo
-lazarus-signatures/
+lazaruspdf-signatures/
 signatures/

@@ -72,7 +72,7 @@ OTHER = [
     ("winpthreads", "", "MIT AND ZPL-2.1", "https://www.mingw-w64.org", None),
     ("Zstandard (libzstd)", "", "BSD-3-Clause", "https://facebook.github.io/zstd/", None),
     ("zlib", "1.3", "Zlib", "https://zlib.net", None),
-    ("Material Design Icons font (used for Lazarus's icons; QtAwesome)", "6.9.96", "Apache-2.0",
+    ("Material Design Icons font (used for Lazarus PDF's icons; QtAwesome)", "6.9.96", "Apache-2.0",
      "https://pictogrammers.com/library/mdi/", "apache-2.0.txt"),
     ("Font Awesome fonts (bundled with QtAwesome)", "5.15.4 / 6.7.2", "SIL OFL 1.1 (fonts)", "https://fontawesome.com",
      "ofl-1.1.txt"),
@@ -103,17 +103,17 @@ def dist_license(name):
 
 
 def main():
-    lines = ["LAZARUS - THIRD-PARTY NOTICES", "",
-             "Lazarus is free software under the GNU Affero General Public License v3.0 (see LICENSE).",
-             "Source code: https://github.com/Crazy8697/Lazarus",
+    lines = ["LAZARUS PDF - THIRD-PARTY NOTICES", "",
+             "Lazarus PDF is free software under the GNU Affero General Public License v3.0 (see LICENSE).",
+             "Source code: https://github.com/Crazy8697/LazarusPDF",
              "",
-             "The Windows build of Lazarus includes the components below, each under its own license.",
+             "The Windows build of Lazarus PDF includes the components below, each under its own license.",
              "All of them allow distribution together with an AGPL-3.0 program.",
              "",
              "Corresponding source for the components under the GPL / LGPL (Qt and PySide6 / Shiboken6,",
              "GNU libiconv, JBIG-KIT, the GCC runtime) is available from the upstream locations listed",
-             "below for the versions shipped; on request the Lazarus maintainer will provide it too, for at",
-             "least three years after a release: open an issue at https://github.com/Crazy8697/Lazarus.",
+             "below for the versions shipped; on request the Lazarus PDF maintainer will provide it too, for at",
+             "least three years after a release: open an issue at https://github.com/Crazy8697/LazarusPDF.",
              "Qt and the other libraries are shipped as separate files (DLLs) in the program folder, so they",
              "can be replaced with modified versions.",
              "", "=" * 78, "COMPONENTS", "=" * 78, ""]

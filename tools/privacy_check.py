@@ -1,4 +1,4 @@
-"""Refuse to publish if a tracked file of Lazarus carries something private: a personal Windows user
+"""Refuse to publish if a tracked file of Lazarus PDF carries something private: a personal Windows user
 path, a home-network address or hostname, a token or key. build.ps1 -Release runs it before the
 source goes to the public repo; run it by hand any time:
 

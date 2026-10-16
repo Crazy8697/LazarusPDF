@@ -1,8 +1,10 @@
-# Lazarus roadmap and status
+# Lazarus PDF roadmap and status
+
+(Named Lazarus until 0.21.0; renamed Lazarus PDF in stage 22. The rows below keep the names of their time.)
 
 Kept current as each item lands. One stage at a time; each is hand-tested before the next.
 Guiding rules: fully local (no outside apps or services; bundled libraries or Windows-native
-bridges only), and Lazarus **never writes an original or any protected PDF**: every save and
+bridges only), and Lazarus PDF **never writes an original or any protected PDF**: every save and
 export goes to a new file, enforced on every write path (`protect.py`).
 
 ## Done
@@ -44,10 +46,11 @@ export goes to a new file, enforced on every write path (`protect.py`).
 | 19b | Update checker (GitHub latest-release lookup only; background at startup, toggle in Settings; Help > Check for updates; non-modal bar with notes, Download and install / Skip / Later; SHA-256-verified download, unsaved-work prompt, in-place upgrade with relaunch; source runs never install) + public releases-only repo Crazy8697/Lazarus (README only, no release yet) + build.ps1 -Release (and -TestBuild); -Install removed; version 0.19.1 | efe1ea4, c6164e6, 7331991, 402f446, 2bcdf40, 3fb6488 |
 | 20 | Final shakedown + first public release prep: open source (AGPL-3.0, LICENSE, THIRD-PARTY-NOTICES shipped and in Help > Licenses, license audit), public README with a one-click download, privacy audit + tools/privacy_check.py, -Release syncs the public source (git archive of this folder) and attaches Lazarus-Setup.exe, About box on the DarkRelay banner, Help > Support DarkRelay, 'program' wording, cross-feature combo tests; fixes: Markdown / EPUB dropped repeated body lines, -Release's empty source archive; version 0.20.0 | 5d68bdc, 27b0283, dea6958, b9623a3, 4e93192, fea0844, 156fb43, 8f67773, 5f5946b, 78184a0, 35194a4, 63902e4, 3aed741 |
 | 21 | Extraction outputs from the corrected review text, both to a new file with progress and Cancel: Searchable PDF (the original pages untouched plus an invisible, searchable layer of the corrected text, words aligned to Tesseract's positions; text-layer pages keep their layer; one shared layer code path, ocrlayer.py, with the editor's OCR page tool) and Rebuilt pages (a new typeset PDF, same page sizes, serif text, figures kept, no scan images); the last placeholders removed (import Mode choice, View > Page layout, the Document panel's greyed-tools note); stage 15's real-scanner test dropped for good; version 0.21.0 | 2f975a2, 1a5e092, 2e51d00, 1161ec8, 9211f5e |
+| 22 | Renamed Lazarus PDF (shown) / LazarusPDF (identifiers): window, dialogs, About, installer (LazarusPDF-Setup.exe, Program Files\LazarusPDF, LazarusPDF.exe, Apps entry and shortcuts "Lazarus PDF"), settings key, ProgID LazarusPDF.PDF, Capabilities, instance pipe, temp names, updater User-Agent; repo Crazy8697/Lazarus renamed Crazy8697/LazarusPDF (GitHub redirects the old address); source folder, package, dev venv and launcher renamed. Upgrade from 0.21.0 (same AppId): old folder, shortcuts and Apps entry removed, settings + signatures moved and verified (migrate.py), .pdf registration moved with the old ProgID kept as a forwarder while Windows' protected default choice names it; releases also carry the installer under the names 0.21.0's updater looks for. Version 0.22.0 | feaa1cc, fb51383, c34244e, 35205c7, 157b422 |
 
 ## Remaining, in order
 
-Nothing scheduled. v0.20.0 is published; the maintainer checks the real-world updater path (Help > Check for updates, its UAC prompt and unelevated relaunch) with the upgrade to v0.21.0.
+Nothing scheduled. v0.22.0 (the rename) is published; the maintainer checks the real-world update from an installed 0.21.0 himself.
 
 Dark mode is already in place (the whole program uses its dark theme).
 

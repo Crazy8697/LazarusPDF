@@ -1,24 +1,26 @@
-# Build Lazarus (PyInstaller onedir: dist\Lazarus\Lazarus.exe) and its Windows installer.
+# Build Lazarus PDF (PyInstaller onedir: dist\LazarusPDF\LazarusPDF.exe) and its Windows installer.
 #   .\build.ps1                    build only (dist\ and build\ are gitignored)
 #   .\build.ps1 -SelfTest <pdf>    build, then run the frozen exe's --selftest on a test PDF you pass
-#   .\build.ps1 -Setup             build, then package dist\Lazarus as Lazarus-Setup-<version>.exe (+ .sha256)
+#   .\build.ps1 -Setup             build, then package dist\LazarusPDF as LazarusPDF-Setup-<version>.exe (+ .sha256)
 #                                  with Inno Setup 6 (ISCC; a build tool only) into -SetupDir (outside the repo)
-#   .\build.ps1 -Setup -NoBuild    package the existing dist\Lazarus without rebuilding
-#   .\build.ps1 -Setup -TestBuild  a TEST installer ("Lazarus Test": its own AppId, folder and shortcut names),
+#   .\build.ps1 -Setup -NoBuild    package the existing dist\LazarusPDF without rebuilding
+#   .\build.ps1 -Setup -TestBuild  a TEST installer ("Lazarus PDF Test": its own AppId, folder and shortcut names),
 #                                  so tests never touch a real installation
 #   .\build.ps1 -Release -Version x.y.z
-#                                  publish: refuses unless this Lazarus folder is clean in git, x.y.z is
-#                                  lazarus.__version__, installer\release-notes\vx.y.z.md exists, the tag isn't
+#                                  publish: refuses unless this Lazarus PDF folder is clean in git, x.y.z is
+#                                  lazaruspdf.__version__, installer\release-notes\vx.y.z.md exists, the tag isn't
 #                                  on GitHub yet and tools\privacy_check.py finds nothing; then
-#                                    1. builds the Setup + .sha256 (+ the same installer as Lazarus-Setup.exe,
+#                                    1. builds the Setup + .sha256 (+ the same installer as LazarusPDF-Setup.exe,
 #                                       the constant name the README's download button points at),
-#                                    2. syncs the PUBLIC source repo Crazy8697/Lazarus: a clone in -PublicDir
+#                                    2. syncs the PUBLIC source repo Crazy8697/LazarusPDF: a clone in -PublicDir
 #                                       gets exactly this folder's committed files (git archive of HEAD, so
 #                                       nothing outside this folder and none of its private history), the
-#                                       README's version / size line, one commit "Lazarus x.y.z", pushed,
+#                                       README's version / size line, one commit "Lazarus PDF x.y.z", pushed,
 #                                    3. creates release vx.y.z there (gh CLI) on that commit with
-#                                       Lazarus-Setup-x.y.z.exe, its .sha256 (the updater's names) and
-#                                       Lazarus-Setup.exe.
+#                                       LazarusPDF-Setup-x.y.z.exe, its .sha256 (the updater's names) and
+#                                       LazarusPDF-Setup.exe; plus the same installer under the names Lazarus
+#                                       0.21.0 and older look for (stage 22): Lazarus-Setup-x.y.z.exe + .sha256
+#                                       (their updater) and Lazarus-Setup.exe (old download links).
 #                                  The private working copy stays where it is (Forgejo); only this folder goes
 #                                  to GitHub, and only on a release.
 # Installing is Setup's job: there is no copy-to-a-folder install any more.
@@ -31,8 +33,8 @@ param(
     [string]$Version = "",
     [switch]$NoBuild,
     [switch]$TestBuild,
-    [string]$SetupDir = (Join-Path $env:USERPROFILE "Lazarus-Setup"),
-    [string]$PublicDir = (Join-Path $env:LOCALAPPDATA "Lazarus-public\Lazarus"),
+    [string]$SetupDir = (Join-Path $env:USERPROFILE "LazarusPDF-Setup"),
+    [string]$PublicDir = (Join-Path $env:LOCALAPPDATA "LazarusPDF-public\LazarusPDF"),
     [switch]$FreshPublicHistory     # -Release only, once, deliberately: the public repo restarts from this release's
                                     # single commit (force-pushed), dropping whatever history it had
 )
@@ -41,16 +43,16 @@ $ErrorActionPreference = "Stop"
 $py = if ($env:LAZARUS_PY) { $env:LAZARUS_PY }
       elseif (Test-Path (Join-Path $PSScriptRoot ".venv\Scripts\python.exe")) { Join-Path $PSScriptRoot ".venv\Scripts\python.exe" }
       else { "python" }
-$ReleasesRepo = "Crazy8697/Lazarus"
+$ReleasesRepo = "Crazy8697/LazarusPDF"
 Push-Location $PSScriptRoot
 try {
-    $ver = (Select-String -Path (Join-Path $PSScriptRoot "lazarus\__init__.py") -Pattern '__version__ = "([^"]+)"').Matches[0].Groups[1].Value
+    $ver = (Select-String -Path (Join-Path $PSScriptRoot "lazaruspdf\__init__.py") -Pattern '__version__ = "([^"]+)"').Matches[0].Groups[1].Value
     if ($Release) {
         if ($TestBuild) { throw "-Release never publishes a test build." }
         if ($Version -ne $ver) { throw "-Version '$Version' doesn't match lazarus.__version__ ($ver)." }
         $dirty = git -C $PSScriptRoot status --porcelain -- .
         if ($LASTEXITCODE -ne 0) { throw "git status failed" }
-        if ($dirty) { throw "This Lazarus folder isn't clean in git; commit (to Forgejo) first." }
+        if ($dirty) { throw "This Lazarus PDF folder isn't clean in git; commit (to Forgejo) first." }
         & $py (Join-Path $PSScriptRoot "tools\privacy_check.py")
         if ($LASTEXITCODE -ne 0) { throw "The privacy check found something; nothing was published." }
         $notes = Join-Path $PSScriptRoot "installer\release-notes\v$ver.md"
@@ -61,20 +63,20 @@ try {
         $Setup = $true
     }
 
-    $dist = Join-Path $PSScriptRoot "dist\Lazarus"
+    $dist = Join-Path $PSScriptRoot "dist\LazarusPDF"
     if (-not $NoBuild) {
-        & $py -m PyInstaller --noconfirm --clean lazarus.spec
+        & $py -m PyInstaller --noconfirm --clean lazaruspdf.spec
         if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed ($LASTEXITCODE)" }
     }
     $mb = [math]::Round((Get-ChildItem $dist -Recurse -File | Measure-Object Length -Sum).Sum / 1MB, 1)
-    Write-Host "Built: $dist\Lazarus.exe  ($mb MB)"
+    Write-Host "Built: $dist\LazarusPDF.exe  ($mb MB)"
 
     if ($SelfTest) {
-        $work = Join-Path $env:TEMP "lazarus-selftest"
+        $work = Join-Path $env:TEMP "lazaruspdf-selftest"
         Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
         $report = Join-Path $work "report.json"
         New-Item -ItemType Directory -Force $work | Out-Null
-        $p = Start-Process "$dist\Lazarus.exe" -ArgumentList "--selftest", "`"$report`"", "`"$SelfTest`"", "`"$work`"" -Wait -PassThru
+        $p = Start-Process "$dist\LazarusPDF.exe" -ArgumentList "--selftest", "`"$report`"", "`"$SelfTest`"", "`"$work`"" -Wait -PassThru
         Write-Host "Self-test exit $($p.ExitCode); report: $report"
     }
 
@@ -92,9 +94,9 @@ try {
         New-Item -ItemType Directory -Force $SetupDir | Out-Null
         $defs = @("/DAppVersion=$ver", "/DDistDir=$dist", "/O$SetupDir")
         if ($TestBuild) { $defs += "/DTestBuild=1" }
-        & $iscc /Q @defs (Join-Path $PSScriptRoot "installer\lazarus.iss")
+        & $iscc /Q @defs (Join-Path $PSScriptRoot "installer\lazaruspdf.iss")
         if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)" }
-        $base = if ($TestBuild) { "Lazarus-Test-Setup-$ver.exe" } else { "Lazarus-Setup-$ver.exe" }
+        $base = if ($TestBuild) { "LazarusPDF-Test-Setup-$ver.exe" } else { "LazarusPDF-Setup-$ver.exe" }
         $out = Join-Path $SetupDir $base
         $hash = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
         Set-Content -Path "$out.sha256" -Value "$hash *$base" -Encoding ascii -NoNewline
@@ -104,8 +106,17 @@ try {
 
         if ($Release) {
             # the constant-named copy for the README's one-click download (releases/latest/download/...)
-            $plain = Join-Path $SetupDir "Lazarus-Setup.exe"
+            $plain = Join-Path $SetupDir "LazarusPDF-Setup.exe"
             Copy-Item $out $plain -Force
+            # the names Lazarus 0.21.0 and older look for (stage 22): their updater wants
+            # Lazarus-Setup-<version>.exe + its .sha256; old links want Lazarus-Setup.exe. Same file.
+            $legacyDir = Join-Path $SetupDir "legacy-$ver"
+            New-Item -ItemType Directory -Force $legacyDir | Out-Null
+            $legacy = Join-Path $legacyDir "Lazarus-Setup-$ver.exe"
+            Copy-Item $out $legacy -Force
+            Set-Content -Path "$legacy.sha256" -Value "$hash *Lazarus-Setup-$ver.exe" -Encoding ascii -NoNewline
+            $legacyPlain = Join-Path $legacyDir "Lazarus-Setup.exe"
+            Copy-Item $out $legacyPlain -Force
 
             # 1. the public source: exactly this folder's committed files, one commit per release
             if (-not (Test-Path (Join-Path $PublicDir ".git"))) {
@@ -116,11 +127,11 @@ try {
             git -C $PublicDir pull --ff-only
             if ($LASTEXITCODE -ne 0) { throw "Couldn't update the public clone" }
             if ($FreshPublicHistory) {
-                git -C $PublicDir checkout -q --orphan lazarus-fresh
+                git -C $PublicDir checkout -q --orphan lazaruspdf-fresh
                 if ($LASTEXITCODE -ne 0) { throw "Couldn't start a fresh history" }
             }
             $prefix = (git -C $PSScriptRoot rev-parse --show-prefix).Trim().TrimEnd("/")
-            $tar = Join-Path $env:TEMP "lazarus-public-$ver.tar"
+            $tar = Join-Path $env:TEMP "lazaruspdf-public-$ver.tar"
             # (from the repo's top: run in this subfolder, git would apply the prefix twice: an empty archive)
             $top = (git -C $PSScriptRoot rev-parse --show-toplevel).Trim()
             git -C $top archive --format=tar -o $tar "HEAD:$prefix"
@@ -146,7 +157,7 @@ try {
             $gu = gh api user --jq '.login + \" \" + (.id | tostring)'
             $login, $uid = $gu.Trim().Split(" ")
             git -C $PublicDir -c "user.name=$login" -c "user.email=$uid+$login@users.noreply.github.com" `
-                commit -q -m "Lazarus $ver"
+                commit -q -m "Lazarus PDF $ver"
             if ($LASTEXITCODE -ne 0) { throw "Nothing to commit in the public clone?" }
             if ($FreshPublicHistory) {
                 git -C $PublicDir branch -D main
@@ -159,8 +170,8 @@ try {
             $commit = (git -C $PublicDir rev-parse HEAD).Trim()
 
             # 2. the release, on that commit: the updater's assets + the constant-named installer
-            gh release create "v$ver" $out "$out.sha256" $plain --repo $ReleasesRepo --target $commit `
-                --title "Lazarus $ver" --notes-file $notes
+            gh release create "v$ver" $out "$out.sha256" $plain $legacy "$legacy.sha256" $legacyPlain `
+                --repo $ReleasesRepo --target $commit --title "Lazarus PDF $ver" --notes-file $notes
             if ($LASTEXITCODE -ne 0) { throw "gh release create failed ($LASTEXITCODE)" }
             Write-Host "Released v$ver on $ReleasesRepo (source commit $commit)"
         }

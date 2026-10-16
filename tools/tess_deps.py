@@ -2,7 +2,7 @@
 
 Walks the PE import tables (pefile) from tesseract.exe, recursively, keeping only DLLs
 that live in the Tesseract folder (system DLLs come from Windows). The build copies
-exactly this set, plus tessdata/eng + osd, into dist\\Lazarus\\_internal\\tesseract.
+exactly this set, plus tessdata/eng + osd, into dist\\LazarusPDF\\_internal\\tesseract.
 The UB-Mannheim install also ships the training tools' DLLs; we leave those out.
 
 usage: python tools/tess_deps.py "C:\\Program Files\\Tesseract-OCR"   -> one file name per line
