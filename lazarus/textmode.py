@@ -5,13 +5,51 @@ import subprocess
 import traceback
 from pathlib import Path
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QFileDialog, QLabel, QMenu, QMessageBox, QToolBar, QToolButton
 
 from . import APP_NAME, export, output
 from . import settings as S
 from .editor import Editor
+
+
+PDF_OUTPUTS = {  # stage 21: key -> (menu label, file suffix, what it is)
+    "searchable": ("Searchable PDF (original pages + your corrected text)…", "-searchable.pdf",
+                   "The original pages exactly as they look, with your corrected text (filled gaps included) as an "
+                   "invisible, selectable, searchable layer"),
+    "rebuilt": ("Rebuilt pages (clean typeset PDF)…", "-rebuilt.pdf",
+                "A new, clean PDF typeset from your corrected text: crisp text pages, no scan images"),
+}
+
+
+class _PdfJob(QThread):
+    """Searchable / Rebuilt in the background (Tesseract reads the pages for the searchable layer)."""
+    progressed = Signal(int, int)
+    done = Signal(str, str)          # status ("ok" | "cancelled" | "failed"), detail
+
+    def __init__(self, kind, pages, src, dest, password, title):
+        super().__init__()
+        self.kind, self.pages, self.src, self.dest = kind, pages, src, dest
+        self.password, self.title = password, title
+        self.cancel = False
+
+    def run(self):
+        from . import rebuild
+        try:
+            prog = lambda d, t: self.progressed.emit(d, t)        # noqa: E731
+            stop = lambda: self.cancel                             # noqa: E731
+            if self.kind == "searchable":
+                n = rebuild.searchable(self.pages, self.src, self.dest, self.password, progress=prog, stopped=stop)
+                self.done.emit("ok", f"{len(n)} page(s) got your corrected text")
+            else:
+                n = rebuild.rebuilt(self.pages, self.src, self.dest, self.password, progress=prog, stopped=stop,
+                                    title=self.title)
+                self.done.emit("ok", f"{n} page(s)")
+        except rebuild.Cancelled:
+            self.done.emit("cancelled", "")
+        except Exception as e:                       # shown on screen only, never logged
+            self.done.emit("failed", str(e))
 
 
 class ExtractionMode(QObject):
@@ -24,6 +62,10 @@ class ExtractionMode(QObject):
         self.settings = settings
         self.active = False
         self.paths = None          # review output paths of the loaded document
+        self.source = None         # the original PDF the review came from (memory only)
+        self.source_password = None    # its password, if it has one (memory only, never stored)
+        self.pdf_job = None
+        self.last_pdf = None       # (tests) what the last Searchable / Rebuilt run reported
         self.title_base = ""       # source base name (used inside outputs only)
         self.editor = Editor()
         self.widget = self.editor
@@ -54,6 +96,15 @@ class ExtractionMode(QObject):
         for key, label, ext, filt in export.FORMATS:
             a = self.export_menu.addAction(label)
             a.triggered.connect(lambda _=False, k=key: self.do_export(k))
+        self.export_menu.addSeparator()
+        self.pdf_actions = {}
+        for k, (label, _sfx, what) in PDF_OUTPUTS.items():
+            a = self.export_menu.addAction(label)
+            a.setToolTip(what)
+            a.setStatusTip(what)
+            a.triggered.connect(lambda _=False, k=k: self.export_pdf_output(k))
+            self.pdf_actions[k] = a
+        self.export_menu.setToolTipsVisible(True)
         self.export_menu.addSeparator()
         self.export_menu.addAction(self.act_headings)
 
@@ -247,6 +298,83 @@ class ExtractionMode(QObject):
             QMessageBox.critical(self.win, APP_NAME, f"Export failed:\n{e}\n\n{traceback.format_exc()}")
             return
         self.status(f"Exported {label}.", 6000)
+
+    def export_pdf_output(self, kind, dest=None, wait=False, gaps_ok=None):
+        """Searchable PDF / Rebuilt pages from the corrected review text, to a NEW file."""
+        from PySide6.QtCore import QEventLoop, QTimer, Qt
+        from PySide6.QtWidgets import QProgressDialog
+        from . import protect
+        if not self.editor.loaded or not self.paths or self.pdf_job is not None:
+            return False
+        label, suffix, _what = PDF_OUTPUTS[kind]
+        src = self.source
+        if not src or not Path(src).is_file():
+            p, _ = QFileDialog.getOpenFileName(self.win, "Where is the original PDF of this review?",
+                                               str(self.paths["review"].parent), "PDF files (*.pdf)")
+            if not p:
+                return False
+            src = self.source = p
+            protect.register("extract", src)
+        open_n, _ = self.editor.gap_counts()
+        if open_n:
+            if gaps_ok is None:
+                r = QMessageBox.warning(self.win, APP_NAME, f"You still have {open_n} gap(s) unfilled. They "
+                                        + ("carry no text in the searchable layer." if kind == "searchable" else
+                                           "show as their marker in the rebuilt pages.") + " Continue?",
+                                        QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel)
+                gaps_ok = r == QMessageBox.Yes
+            if not gaps_ok:
+                return False
+        start_dir = self.settings.value("export_dir", str(self.paths["review"].parent))
+        while dest is None:
+            t, _ = QFileDialog.getSaveFileName(self.win, label.rstrip("…"), str(Path(start_dir) / (self.title_base + suffix)),
+                                               "PDF files (*.pdf)")
+            if not t:
+                return False
+            if not t.lower().endswith(".pdf"):
+                t += ".pdf"
+            if protect.is_protected(t) or Path(t).resolve() == Path(src).resolve():
+                QMessageBox.warning(self.win, APP_NAME, protect.MESSAGE)
+                continue
+            dest = t
+        if protect.is_protected(dest) or Path(dest).resolve() == Path(src).resolve():
+            QMessageBox.warning(self.win, APP_NAME, protect.MESSAGE)
+            self.last_pdf = {"status": "refused"}
+            return False
+        self.settings.setValue("export_dir", str(Path(dest).parent))
+        dlg = QProgressDialog(f"{label.rstrip('…')}…", "Cancel", 0, 100, self.win)
+        dlg.setWindowTitle(APP_NAME)
+        dlg.setWindowModality(Qt.WindowModal)
+        dlg.setMinimumDuration(400)
+        dlg.setAutoClose(False)
+        dlg.setAutoReset(False)
+        job = self.pdf_job = _PdfJob(kind, self.editor.pages(), str(src), str(dest), self.source_password,
+                                     self.title_base)
+        dlg.canceled.connect(lambda: setattr(job, "cancel", True))
+        job.progressed.connect(lambda d, t: (dlg.setMaximum(max(1, t)), dlg.setValue(d)) if self.pdf_job is job else None)
+
+        def finished(status, detail):
+            self.pdf_job = None
+            dlg.close()
+            dlg.deleteLater()                  # (closed, never shown: it must not pop up later)
+            job.wait()
+            job.deleteLater()
+            self.last_pdf = {"status": status, "detail": detail, "dest": str(dest)}
+            if status == "ok":
+                self.status(f"{label.split(' (')[0]} written: {detail}.", 8000)
+            elif status == "cancelled":
+                self.status("Cancelled; nothing was written.", 5000)
+            else:
+                QMessageBox.warning(self.win, APP_NAME, f"That didn't work:\n{detail}")
+        job.done.connect(finished)
+        job.start()
+        if wait:
+            while self.pdf_job is job:
+                loop = QEventLoop()
+                QTimer.singleShot(20, loop.quit)
+                loop.exec()
+            return bool(self.last_pdf and self.last_pdf.get("status") == "ok")
+        return True
 
     def goto_gap(self, forward):
         if not self.editor.goto_gap(forward):

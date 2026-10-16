@@ -27,17 +27,17 @@ The hidden mode keeps its state (open PDF, page, zoom, unsaved edits), and its s
 - **File › Open PDF in Editor…** (Ctrl+O) is for viewing. The PDF opens in PDF Editor mode.
 - Dropping a PDF on the window opens it in the editor when you're in editor mode, and stages it in the import pop-up when you're in extraction mode.
 
-### Layout (all UI; no editing yet)
+### Layout
 - **Modes:** Overview (Ctrl+Shift+1) | PDF Editor (Ctrl+Shift+2) | Extraction (Ctrl+Shift+3).
 - **Tool groups (MARKUP / EDIT / INSERT):** drag a group by its dotted handle.
   - Along row 2 it reorders.
   - Up onto row 1 it turns compact (title + icons only); back down it returns to full form.
   - To the window's left or right edge it becomes a vertical sidebar.
   - If row 2 empties it collapses. Dragging a group back below row 1 shows a "Drop here to open row 2" target.
-- **View menu:** Markup / Edit / Insert toolbar toggles, Pages / Document panel toggles, Page layout (placeholder), and **Lock layout**, which freezes every toolbar and panel.
+- **View menu:** Markup / Edit / Insert toolbar toggles, Pages / Document panel toggles, and **Lock layout**, which freezes every toolbar and panel.
 - **Panels:** the Pages and Document panels can be docked at the top (or bottom). They re-flow horizontally there.
-- **Overview:** every page in a zoomable grid. It shows real pages if a PDF is open in the editor, otherwise numbered placeholders.
-  - Row 2 has the pages-wide × pages-high boxes, presets 30×10 / 15×5 / 8×3, and the page operations (placeholders).
+- **Overview:** every page in a zoomable grid. It shows real pages if a PDF is open in the editor, otherwise numbered empty pages.
+  - Row 2 has the pages-wide × pages-high boxes, presets 30×10 / 15×5 / 8×3, and the page operations.
   - You can't zoom out past about 30 × 10 pages.
 
 ## Extraction mode
@@ -49,7 +49,7 @@ You can also drop a PDF anywhere on the window. The pop-up closes on its own whe
 - Clicking into an open gap selects the whole marker.
 - A gap whose text no longer reads `[[FILL IN — p.N]]` counts as filled and turns green with a dotted underline. To change the colours, edit `STYLES` in `lazarus/editor.py`.
 - **Save** (Ctrl+S) rewrites the four review outputs in place. It never writes copies.
-- **Export ▾** saves PDF, Word (.docx), EPUB, Markdown, HTML or .txt, always from the current edited text.
+- **Export ▾** saves PDF, Word (.docx), EPUB, Markdown, HTML or .txt, always from the current edited text. It also makes the two PDF outputs below: **Searchable PDF** and **Rebuilt pages**.
   - Filled gaps export as plain text. Open gaps keep the highlighted marker.
   - Images go into PDF, DOCX, EPUB and HTML. Markdown and .txt keep `[[FIGURE — p.N]]`.
   - If any gaps are still open, you're asked to confirm the export first.
@@ -61,7 +61,7 @@ What works:
 - A read-only page canvas (QGraphicsView) with zoom in/out, typed zoom %, Ctrl+wheel, fit width (Ctrl+0), 100% (Ctrl+1), pan, PgUp/PgDn, and a go-to-page box.
 - A thumbnail sidebar; click a thumbnail to jump to that page.
 
-Every other tool is a greyed placeholder whose tooltip says what it will do. The PDF is never written.
+Every tool is live (the sections below). The PDF is never written.
 The tool list lives in `TOOLS` in `lazarus/pdfeditor.py`. Icons come from QtAwesome (Material Design Icons).
 
 ## PDF Editor: editing and saving
@@ -344,9 +344,10 @@ Changes apply on OK or Apply. Restore Defaults refills the form, and nothing is 
 - Uninstall removes the program files, the shortcuts and the Apps entry, and runs `Lazarus.exe --unregister-default`: the .pdf registration is removed exactly as Settings › Remove does, and only if it points at this install. User data stays: settings and the recent-files list (HKCU\Software\Lazarus\Lazarus), saved signatures (%APPDATA%\Lazarus\signatures), and every output folder.
 - Updates from inside Lazarus (stage 19b) start this Setup with `/SILENT /SP- /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1`: the same AppId upgrades the installation in place (one UAC prompt; settings, shortcuts and the .pdf registration stay; the default-reader step isn't repeated) and `/RELAUNCH=1` starts Lazarus again afterwards as the original, unelevated user.
 - Program Files is read-only for the program: nothing is written next to the exe (settings in the registry, signatures in %APPDATA%, temporary files in %TEMP%, outputs where the user chooses). The self-test checks it (`install_folder_untouched`). `tools/run_unelevated.py` runs a command de-elevated (the `runas /trustlevel:0x20000` token at Medium integrity, hidden) for testing an installed copy from an elevated shell.
-## Later (stubbed in `lazarus/modes.py`)
-- Searchable-PDF mode: the original pages plus an invisible text layer.
-- Rebuilt-page mode: clean text set around the original drawings.
+## Extraction: Searchable PDF and Rebuilt pages (stage 21)
+Both come from Extraction's **Export ▾** menu and use your CORRECTED review text: every word you changed and every gap you filled in. Both write a NEW PDF at a location you choose (the original, or any protected file, is refused), run in the background with progress and Cancel (a cancelled run writes nothing), and ask first if gaps are still open. They need the original PDF again: Lazarus remembers it from the import (and its password, in memory only); a review opened another way asks where the original is.
+- **Searchable PDF…** (`-searchable.pdf`): the original pages exactly as they look, with your corrected text as an invisible, selectable, searchable layer behind them. Tesseract reads each page as displayed (the same engine and code as Document › OCR page, `lazarus/ocrlayer.py`), and your text is lined up with its words: an unchanged word keeps its exact position, a corrected word or filled gap sits where the word(s) it replaces are, text with nothing readable under it goes right after the word before it. Pages without a text layer (scans) get the corrected text for the whole page. Pages that already have a real text layer keep it untouched; only what Extraction had to OCR on them (pictures of text, the words the layer doesn't cover) gets your corrected text added. Open gaps carry no text. The output isn't encrypted.
+- **Rebuilt pages…** (`-rebuilt.pdf`): a brand-new, clean PDF typeset from your corrected text, no scan images. Each original page becomes a page of the same size (more if its text runs over); 0.75 inch margins; 11 pt serif text (Windows' Times New Roman, embedded as a subset, else the built-in Times) at 1.38 line spacing; your paragraphs in order with a small gap between them, each original page starting a new page; the figures Extraction kept (pictures and drawings) centred where they came, at their printed size; open gaps show as their fill-in marker. The text is placed word by word, so it selects and searches exactly as typed.
 
 ## Privacy
 Processed PDFs and outputs are never committed (see `.gitignore`). Never put a processed file's name, path, or contents in commits, logs, or notes.

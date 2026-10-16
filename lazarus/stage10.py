@@ -340,12 +340,10 @@ def has_real_text(page):
 
 
 def ocr_page_pdf(page, lang="eng", dpi=OCR_DPI):
-    """Tesseract on the page AS DISPLAYED -> a one-page PDF holding only invisible text."""
-    import pytesseract
-    from PIL import Image
-    pix = page.get_pixmap(dpi=dpi, alpha=False)
-    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-    return pytesseract.image_to_pdf_or_hocr(img, lang=lang, extension="pdf", config="-c textonly_pdf=1")
+    """Tesseract on the page AS DISPLAYED -> a one-page PDF holding only invisible text. The shared
+    layer code (ocrlayer.py) that Extraction's Searchable PDF uses too (stage 21)."""
+    from .ocrlayer import ocr_layer
+    return ocr_layer(page, lang, dpi)
 
 
 def add_ocr_layers(doc, layers):

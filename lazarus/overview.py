@@ -509,4 +509,4 @@ class OverviewMode(QObject):
         elif select is not None:
             self.grid.set_selection(select)
         n = doc.page_count if doc else PLACEHOLDER_PAGES
-        self.count_label.setText(f"  {n} pages" + ("" if doc else " (placeholder — open a PDF in the editor)") + "  ")
+        self.count_label.setText(f"  {n} pages" + ("" if doc else " (no PDF open yet: open one in the editor)") + "  ")

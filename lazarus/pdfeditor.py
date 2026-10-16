@@ -1,10 +1,9 @@
 """PDF Editor mode (stage 1 UI shell, hosted in the main window since stage 2).
 
-Working: open a PDF read-only, a page canvas (QGraphicsView) with zoom / fit width /
-pan / page navigation, and a thumbnail sidebar.
-Everything else is a placeholder. Placeholders are greyed, carry a tooltip saying
-what they will do, and only put "not implemented yet" in the status bar.
-The source PDF is opened read-only and never saved."""
+The editor's frame: tabs, the page canvas (QGraphicsView) with zoom / fit / pan / page
+navigation, the thumbnail and document panels, the tool groups and menus. Each tool group's
+actions are made here and given their behaviour by its stage's controller (realize()); since
+stage 21 none is left without one. The source PDF is opened read-only and never saved."""
 import time
 from pathlib import Path
 
@@ -1077,27 +1076,6 @@ class PdfEditorMode(QObject):
         self.view_doc_actions = [self.act_zin, self.act_zout, self.act_fit, self.act_100,
                                  self.act_prev, self.act_next, self.act_select, self.act_hand]
 
-        # page layout / view style (placeholder): single page, two-up, continuous scroll
-        self.layout_menu = QMenu("Page layout", win)
-        self.style_group = QActionGroup(win)
-        self.style_group.setExclusive(True)
-        for key, icon, label, what in (
-                ("single", "file-document-outline", "Single page", "Show one page at a time"),
-                ("twoup", "book-open-page-variant-outline", "Two-up", "Show two pages side by side"),
-                ("continuous", "view-day-outline", "Continuous scroll", "Pages stacked in one scrolling column")):
-            a = QAction(_icon(icon, on=False), label, win, checkable=True)
-            a.setToolTip(f"<b>{label}</b><br>{what}<br><i>Not implemented yet</i>")
-            a.triggered.connect(lambda _=False, l=label, w=what: self._style_soon(l, w))
-            self.style_group.addAction(a)
-            self.layout_menu.addAction(a)
-            self.soon["style_" + key] = a
-        self.soon["style_continuous"].setChecked(True)       # what the canvas shows today
-        self.style_btn = QToolButton()
-        self.style_btn.setIcon(_icon("view-day-outline", on=False))
-        self.style_btn.setToolTip("<b>Page layout</b><br>Single page / Two-up / Continuous scroll<br><i>Not implemented yet</i>")
-        self.style_btn.setMenu(self.layout_menu)
-        self.style_btn.setPopupMode(QToolButton.InstantPopup)
-        self.style_btn.setProperty("soon", True)
 
         # mode menus (placed on the menu bar by the main window)
         self.menus = []
@@ -1149,7 +1127,6 @@ class PdfEditorMode(QObject):
         tb.addWidget(self.zoom_box)
         tb.addAction(self.act_zin)
         tb.addAction(self.act_fit)
-        tb.addWidget(self.style_btn)
         tb.addSeparator()
         tb.addAction(self.act_prev)
         self.page_spin = QSpinBox()
@@ -1235,8 +1212,8 @@ class PdfEditorMode(QObject):
             self._doc_grids.append((bv, buttons))
             rv.addWidget(box, 0, Qt.AlignTop)
         rv.addStretch(1)
-        info = QLabel("Greyed tools are placeholders for later stages.\n\nEdits happen on an in-memory "
-                      "copy. The original PDF is never written; saves always go to a new file.")
+        info = QLabel("Edits happen on an in-memory copy. The original PDF is never written; saves always "
+                      "go to a new file.")
         info.setObjectName("legend")
         info.setWordWrap(True)
         rv.addWidget(info)
@@ -1322,7 +1299,6 @@ class PdfEditorMode(QObject):
             if a in self.tab_actions:
                 continue
             a.setVisible(on)
-        self.layout_menu.menuAction().setVisible(on)
         self.act_open.setEnabled(True)       # Open PDF in Editor works from either mode
         self.status_page.setVisible(on)
         self._apply_enabled()
@@ -1359,10 +1335,6 @@ class PdfEditorMode(QObject):
         self._doc_info.setVisible(not horiz)
         self.docks[1].setMinimumWidth(0 if horiz else 200)
         self.docks[1].setMaximumHeight(185 if horiz else 16777215)
-
-    def _style_soon(self, label, what):
-        self.soon["style_continuous"].setChecked(True)
-        self.status(f"Not implemented yet: {label} — {what}.", 5000)
 
     def _apply_enabled(self):
         live = self.active and self.doc is not None

@@ -16,7 +16,7 @@ Read, mark up, edit, rearrange, fill in, protect and export PDFs. Everything sta
 </p>
 
 <!-- dl-info -->
-<p align="center"><sub>Windows 10 / 11, 64-bit &nbsp;&middot;&nbsp; version 0.20.0 &nbsp;&middot;&nbsp; 104 MB &nbsp;&middot;&nbsp; <a href="https://github.com/Crazy8697/Lazarus/releases">all releases</a></sub></p>
+<p align="center"><sub>Windows 10 / 11, 64-bit &nbsp;&middot;&nbsp; version 0.21.0 &nbsp;&middot;&nbsp; 104 MB &nbsp;&middot;&nbsp; <a href="https://github.com/Crazy8697/Lazarus/releases">all releases</a></sub></p>
 <!-- /dl-info -->
 
 <p align="center"><sub>The installer isn't code-signed, so Windows may show "Windows protected your PC": click <b>More info</b>, then <b>Run anyway</b>.</sub></p>
@@ -39,8 +39,9 @@ confirm it in Settings › Default apps). Each release also lists the versioned 
   metadata, flatten, compress, passwords and permissions (AES-256), OCR to searchable PDF.
 - **Create and convert:** PDFs from images or your scanner; export to Word, EPUB, Markdown, HTML, text
   or PDF; batch processing of many files.
-- **Extraction mode:** pull the text out of a PDF (text layer, else OCR) and see every unreadable gap
-  highlighted for you to fill in.
+- **Extraction mode:** pull the text out of a PDF (text layer, else OCR), see every unreadable gap
+  highlighted for you to fill in, then turn your corrected text into a searchable PDF (the original
+  pages with your text as an invisible, searchable layer) or clean rebuilt pages (a new typeset PDF).
 - Every change can be undone, and an original PDF is never written: saves and exports always go to
   a new file.
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QEvent, QSettings, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QKeySequence, QPalette
-from PySide6.QtWidgets import (QApplication, QComboBox, QDialog, QFileDialog, QFrame,
+from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QFrame,
                                QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
                                QMessageBox, QProgressBar, QPushButton, QStackedWidget, QStyle,
                                QStyleOptionToolBar,
@@ -109,19 +109,12 @@ class ImportDialog(QDialog):
         # QLineEdit accepts text drops by default and would swallow the file drag
         self.pdf_edit.setAcceptDrops(False)
         self.out_edit.setAcceptDrops(False)
-        self.mode = QComboBox()
-        for key, label, enabled in modes.MODES:
-            self.mode.addItem(label, key)
-            if not enabled:
-                self.mode.model().item(self.mode.count() - 1).setEnabled(False)
         g.addWidget(QLabel("PDF"), 0, 0)
         g.addWidget(self.pdf_edit, 0, 1)
         g.addWidget(pick, 0, 2)
         g.addWidget(QLabel("Output"), 1, 0)
         g.addWidget(self.out_edit, 1, 1)
         g.addWidget(out_btn, 1, 2)
-        g.addWidget(QLabel("Mode"), 2, 0)
-        g.addWidget(self.mode, 2, 1, 1, 2)
         v.addLayout(g)
 
         row = QHBoxLayout()
@@ -241,7 +234,8 @@ class ImportDialog(QDialog):
         password = (lock.user_pw or None) if lock else None
         out = self.out_edit.text().strip() or DEFAULT_OUT
         self.settings.setValue("out_dir", out)
-        self.worker = Worker(self.mode.currentData(), src, out, password)
+        self.last_password = password        # memory only: Searchable / Rebuilt need the original again
+        self.worker = Worker(modes.EXTRACT, src, out, password)
         self.worker.progressed.connect(self.on_progress)
         self.worker.finished_ok.connect(self.on_done)
         self.worker.failed.connect(self.on_fail)
@@ -431,8 +425,6 @@ class Main(QMainWindow):
             else:
                 vm.addAction(a)
         vm.addSeparator()
-        vm.addMenu(self.editor_mode.layout_menu)
-        vm.addSeparator()
         self.group_toggles = {}             # mode key -> that mode's toolbar toggles
         for mode_key, groups in (("editor", self.editor_mode.groups), ("overview", self.overview_mode.groups)):
             self.group_toggles[mode_key] = []
@@ -589,6 +581,8 @@ class Main(QMainWindow):
     def on_imported(self, pages, paths):
         if self.text_mode.load(pages, paths):   # switches to Extraction mode
             src = getattr(self.importer, "last_src", None)
+            self.text_mode.source = src                       # Searchable / Rebuilt read it again (21)
+            self.text_mode.source_password = getattr(self.importer, "last_password", None)
             if src:
                 from . import protect
                 protect.register("extract", src)   # exports and review saves may never write to it

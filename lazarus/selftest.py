@@ -6174,6 +6174,129 @@ def run(report_path, pdf, work):
         return out
     check("s20_export_keeps_repeated_body_lines", s20_export_keeps_repeated_body_lines)
 
+    def s21_searchable_and_rebuilt():
+        """Stage 21: Extraction's Searchable PDF and Rebuilt pages carry the CORRECTED review text
+        (a corrected word and a filled gap, typed in the review editor), the searchable copy keeps
+        the scan image with the corrected words at the position of the words they replace, the
+        rebuilt copy has no images and searches as typed, both are new files and the original is
+        byte-identical. The editor's OCR page tool shares the layer code (ocrlayer)."""
+        import hashlib
+        import pymupdf
+        from . import ocrlayer, stage10, tess
+        from .extract import GAP, Filled, Para
+        tess.configure()
+        sw = work / "s21"
+        sw.mkdir(exist_ok=True)
+        t = pymupdf.open()
+        tp = t.new_page()
+        lines = ("The quarterly report shows growth", "Revenue rose in every single region",
+                 "Costs were held flat this year")
+        for i, s in enumerate(lines):
+            tp.insert_text((72, 120 + 50 * i), s, fontsize=20)
+        where = {"growth": tp.search_for("growth")[0], "single": tp.search_for("single")[0]}
+        pix = tp.get_pixmap(dpi=200)
+        t.close()
+        src = sw / "scan.pdf"
+        d = pymupdf.open()
+        p = d.new_page()
+        p.insert_image(p.rect, pixmap=pix)                       # a scan: an image, no text layer
+        d.save(src)
+        d.close()
+        h0 = hashlib.sha256(src.read_bytes()).hexdigest()
+        pages, paths, _ = modes.run(modes.EXTRACT, str(src), str(sw / "out"))
+        for it in pages[0].items:                    # as Extraction marks a word it can't read
+            if isinstance(it, Para) and isinstance(it.segs[0], str) and "single" in it.segs[0]:
+                a, b = it.segs[0].split("single", 1)
+                it.segs = [a.rstrip(), GAP, b.lstrip()]
+        w = gui.Main()
+        w.importer.last_src = str(src)
+        w.on_imported(pages, paths)
+        tm, ed = w.text_mode, w.text_mode.editor
+        out = {"knows_source": tm.source == str(src), "one_open_gap": ed.gap_counts() == (1, 0)}
+        ed.document().find("growth").insertText("GROWTHFIX")          # a corrected word
+        ed.select_fragment(next(ed.gap_fragments()))
+        ed.textCursor().insertText("SMUDGEFILL")                      # a filled gap
+        wait(100)
+        ed.flush()
+        segs = [s for pr in ed.pages() for it in pr.items if isinstance(it, Para) for s in it.segs]
+        out["editor_has_corrections"] = (ed.gap_counts() == (0, 1) and any(isinstance(s, Filled)
+                                         and s.text == "SMUDGEFILL" for s in segs))
+        sp, rp = sw / "out-searchable.pdf", sw / "out-rebuilt.pdf"
+        out["searchable_written"] = tm.export_pdf_output("searchable", dest=str(sp), wait=True, gaps_ok=True)
+        out["rebuilt_written"] = tm.export_pdf_output("rebuilt", dest=str(rp), wait=True, gaps_ok=True)
+
+        def near(found, word):
+            return bool(found) and (found[0] & where[word]).get_area() > 0.3 * where[word].get_area()
+        s = pymupdf.open(sp)
+        pg = s[0]
+        text = pg.get_text()
+        out["searchable_scan_kept"] = s.page_count == 1 and len(pg.get_images()) == 1
+        out["searchable_corrected_word_in_place"] = near(pg.search_for("GROWTHFIX"), "growth")
+        out["searchable_filled_gap_in_place"] = near(pg.search_for("SMUDGEFILL"), "single")
+        out["searchable_text_is_corrected"] = (" growth" not in text.replace("GROWTHFIX", "")
+                                               and "Costs were held flat this year" in text)
+        traces = pg.get_texttrace()                            # every glyph: render mode 3, invisible
+        out["searchable_layer_invisible"] = bool(traces) and all(tr["type"] == 3 for tr in traces)
+        s.close()
+        r_ = pymupdf.open(rp)
+        rtext = "".join(q.get_text() for q in r_)
+        out["rebuilt_no_images"] = sum(len(q.get_images()) for q in r_) == 0
+        out["rebuilt_has_corrections"] = ("GROWTHFIX" in rtext and "SMUDGEFILL" in rtext
+                                          and "every SMUDGEFILL region" in rtext and "\xa0" not in rtext)
+        out["rebuilt_searchable"] = bool(r_[0].search_for("shows GROWTHFIX"))
+        out["rebuilt_same_page_size"] = r_[0].rect == pymupdf.Rect(0, 0, 595, 842)
+        r_.close()
+        out["original_untouched"] = hashlib.sha256(src.read_bytes()).hexdigest() == h0
+        n0 = len(r["dialogs"])
+        out["refuses_the_original"] = (not tm.export_pdf_output("rebuilt", dest=str(src), wait=True, gaps_ok=True)
+                                       and tm.last_pdf == {"status": "refused"} and len(r["dialogs"]) == n0 + 1
+                                       and hashlib.sha256(src.read_bytes()).hexdigest() == h0)
+        out["one_layer_code_path"] = stage10.ocr_page_pdf.__module__ == "lazarus.stage10" and \
+            "ocr_layer" in stage10.ocr_page_pdf.__code__.co_names and callable(ocrlayer.corrected_words)
+        w.close()
+        # a page that already has a real text layer keeps it as it is (nothing added twice)
+        from . import rebuild
+        tl = sw / "textlayer.pdf"
+        d = pymupdf.open()
+        d.new_page().insert_text((72, 100), "This page already has a real text layer of its own words.")
+        d.save(tl)
+        d.close()
+        tp_pages, _, _ = modes.run(modes.EXTRACT, str(tl), str(sw / "out-tl"))
+        tl_out = sw / "textlayer-searchable.pdf"
+        got = rebuild.searchable(tp_pages, str(tl), str(tl_out))
+        q = pymupdf.open(tl_out)
+        out["text_layer_page_kept_as_is"] = got == [] and q[0].get_text().count("real text layer") == 1
+        q.close()
+        out["ok"] = all(out.values())
+        return out
+    check("s21_searchable_and_rebuilt", s21_searchable_and_rebuilt)
+
+    def s21_no_placeholders():
+        """Stage 21: nothing is a placeholder any more: no greyed "soon" action or widget, no "not
+        implemented" / "placeholder" / "coming later" wording anywhere in the window, no Page
+        layout menu, and the Document panel keeps only the in-memory-copy line."""
+        from PySide6.QtGui import QAction
+        from PySide6.QtWidgets import QLabel, QWidget
+        w = gui.Main()
+        words = ("not implemented", "placeholder", "coming later", "later stage", "not built yet")
+        bad = []
+        for o in w.findChildren(QAction) + w.findChildren(QWidget):
+            s = " ".join(str(getattr(o, m)()) for m in ("text", "toolTip", "statusTip") if hasattr(o, m))
+            if o.property("soon") or any(k in s.lower() for k in words):
+                bad.append(type(o).__name__)
+        labels = [lb.text() for lb in w.findChildren(QLabel)]
+        menus = [a.text() for a in w.menuBar().actions()]
+        sub = [a.text() for m in w.menuBar().actions() if m.menu() for a in m.menu().actions()]
+        out = {"no_placeholder_anything": not bad, "found": len(bad),
+               "greyed_tools_line_gone": not any("Greyed tools" in t for t in labels),
+               "in_memory_line_kept": any(t.startswith("Edits happen on an in-memory copy") for t in labels),
+               "no_page_layout_menu": not any("Page layout" in t for t in menus + sub),
+               "import_has_no_mode_choice": not hasattr(w.importer, "mode")}
+        w.close()
+        out["ok"] = all(v for k, v in out.items() if k != "found")
+        return out
+    check("s21_no_placeholders", s21_no_placeholders)
+
     def install_folder_untouched():
         """Nothing was created, changed or removed in the app's own folder by any check above: an
         installed copy lives in read-only Program Files (every write goes to per-user places)."""
