@@ -1,0 +1,25 @@
+# Files fed to Lazarus are private. Nothing processed, and no output, is ever committed.
+in/
+out/
+extract-out/
+*.pdf
+*.PDF
+*-review.html
+*-text.txt
+*-gaps.txt
+
+# runtime / build
+.venv/
+build/
+dist/
+tesseract/
+__pycache__/
+*.pyc
+
+# PDF Editor saves (always a new file next to the original)
+*-edited.pdf
+*-edited-*.pdf
+
+# saved signatures live in the app-data folder; never in the repo
+lazarus-signatures/
+signatures/

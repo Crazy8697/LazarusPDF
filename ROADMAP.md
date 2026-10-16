@@ -1,0 +1,61 @@
+# Lazarus roadmap and status
+
+Kept current as each item lands. One stage at a time; each is hand-tested before the next.
+Guiding rules: fully local (no outside apps or services; bundled libraries or Windows-native
+bridges only), and Lazarus **never writes an original or any protected PDF**: every save and
+export goes to a new file, enforced on every write path (`protect.py`).
+
+## Done
+
+| Stage / item | What | Commit |
+|---|---|---|
+| Foundations | Extraction app: text layer + Tesseract OCR fallback, gap review/edit, six exports (PDF, DOCX, EPUB, MD, HTML, TXT), drag-drop | 73da04b, d7a72a0, 794b0b7 |
+| 1 | PDF Editor UI shell | 4a0f422 |
+| 2 | One main window, modes (Overview, PDF Editor, Extraction), draggable tool groups, layout lock | 3b844de, f5bab0c, 4639b92, 4460710 |
+| 3 | Standalone exe (PyInstaller onedir, bundled Tesseract) + built-in `--selftest` | dc95c00 |
+| 4 | Settings dialog | e26d23f |
+| 5 | Interactive canvas, in-memory working copy, undo/redo (journalling), save pipeline; reworked: never touch the original, no backups | 2fc4fd2, b679121 |
+| 6 | Page operations (reorder, rotate, delete, insert, duplicate, extract, merge, split, crop), all undoable, Overview as their home | 22f0db6 |
+| 7 | Bookmarks panel; bookmarks stay correct through every page op | 760fe4f |
+| 8 | Text search (Ctrl+F), read-only, live hit count, highlights view-only | ab1129c |
+| 10 (front) | Open password-protected PDFs; saves keep the password | be27492 |
+| 10 (front) b | File › Save With Password: Keep / Set / Match / Clear (each a new file; Ctrl+S repeats the choice) | c6d065e |
+| Architecture: snapshot-undo | One undo history of journal steps + snapshot steps (document swap) for ops PyMuPDF refuses or can't undo; per-op declaration (`oprules.py`); global memory budget (Settings › Undo memory, 30% of RAM + free-RAM check) | adbe9ce |
+| Architecture: multi-document | A Session per open PDF, tabs (per-tab undo, unsaved flag, view state), panels follow the active tab, real Close Tab, compare-view shell with synced scrolling | b8d7050 |
+| 8 follow-up: find-bar polish | Index builds: indicator + window lock past 250 ms, Cancel keeps a partial index ("Partial (X/Y)"), next search resumes | 212d861 |
+| Fix: big-PDF loading | Background load: a tab opens at once with real progress (bytes, then pages), the window never blocks, cancel by closing the tab, several loads at once; renderers work a page per turn; live "Indexing X/Y" | b791baf |
+| Overview gets the tab bar | Tabs above Overview too: same sessions, dirty dots, switch / close / Ctrl+Tab | f11d9ae |
+| 9a | Annotations: highlight, underline, strikeout, ink, rectangle, ellipse, line, arrow, polygon, note, text box, stamp; select (Ctrl+click multi), move, resize, delete; Properties panel; all undoable | 5e2a1dd |
+| 9b | Page-content tools: whiteout (sampled background colour), insert image (PNG/JPG/WebP/other via Pillow, SVG rasterised at 300 dpi), signatures (saved library + one-off), measurement (distance, area; scale from the PDF or calibrated), callouts; all journal-safe, all undoable | 7f4e667 |
+| 10 | Redaction (marks, apply removes text / images / drawings, verified), forms (fill + create + edit), headers / footers, page numbers, watermark, metadata, AES-256 everywhere, flatten, compress, OCR to searchable, Bates numbering; plus a fix: saving no longer breaks undo | 4629c47 (fix), 81fb5f0, faf1ce8, 3d49ad9, 2244e0c, c8fa6b6, fb85a7f, 391edeb, ee1651f, c44ad28, 745a0ee, 50decf4; build fix 8c73c9e |
+| 7a | Auto-generated bookmarks: headings by font size / style (ranked into levels) or a contents page (levels from numbering / indent, printed pages mapped to real pages); editable preview; replace or merge; one undo step; no-text scans point to OCR | a98e40f |
+| 10b | Batch: File › Batch…, a job tab (non-blocking, live during a find-index lock), progress + X of Y files + per-file status + Cancel + summary; 12 operations in an ordered pipeline (OCR, redact terms, bookmarks, metadata, flatten, header / footer, page numbers, Bates across files, watermark, extract / export, compress, password); new files only, named by pattern; a failed or crashing file doesn't stop it; worker process | 10b9cdb |
+| 11 | In-place text editing (Edit text tool: hover, live editor over the block at its size and rotation, styles kept, reflow in the box, shrink or grow on overflow, embedded font reused when it can, else the closest standard font with a notice, old text removed with images and line art kept, verified by re-extraction; Type3 / broken encodings covered with a notice; OCR layer and scans handled; permissions respected) + find / replace (Ctrl+H, Replace, Replace All with preview as one undo step, regex groups, skipped hits with reasons) + a batch step | 227382f |
+| 12 | Default reader: per-user .pdf registration (own ProgID, icon, open verb, Capabilities, Open with), Settings › Default PDF reader (register then confirm in Windows' Default apps; clean unregister); single instance over a local socket (QtNetwork back in the exe): a double-clicked PDF opens as a tab in the running window, an open one is brought forward, several queue; start-up trim (extraction libraries load lazily, Overview builds once); thumbnails lazy, cached, rendered off the UI thread | 8870ed7 |
+| 13 | Compare diff: text mode (word level, exact boxes, inserted / deleted / changed on the right pane / left / both) and visual mode (pixel regions, anti-alias tolerant); pages aligned by content (added / removed / moved, no cascade), reflow across page breaks matched; ignore whitespace / case / punctuation / running headers; page ranges; no-text pages flagged; Changes panel, F7 / Shift+F7, aligned synced scrolling, summary; report to a new PDF; worker process with progress and Cancel; view-only | 4776e30 |
+| 14 | Images to PDF: File › New PDF from Images… (and dropped images), Insert › Images as Pages… (one undo step, journal-safe); PNG / JPEG / WebP / GIF / BMP / TIFF (every frame) / SVG and more, EXIF orientation; reorder / rotate / remove / sort; fit-to-image or Letter / Legal / A4 / A5 / custom with fit / fill / stretch, margins, alignment; 1 / 2 / 4 / 6 per page; JPEG passthrough or recompress; OCR afterwards; built in a worker process, streamed, progress + Cancel; the new PDF opens unsaved | f1defcd |
+| 15 | Scanner import (WIA 2.0 through comtypes, no TWAIN): File › Scan…, Insert › Scan as Pages… (one undo step, journal-safe); Lazarus's own dialog offering only what the scanner reports (flatbed / feeder / duplex, colour modes, resolutions, sizes, brightness / contrast); flatbed page by page, feeder to empty; reorder / rotate / delete / rescan; skip blank pages, deskew, crop; device errors keep the pages; OCR afterwards; built with the stage 14 engine as an unsaved tab. Mock-tested; real device not tested (skipped by the maintainer). An earlier attempt found the scanner but it reported itself not online; that exposed a Lazarus bug (WIA's wrapped errors showed as a bare code), fixed with a regression check. | 1f1776d |
+| 16 | PDF to Word: File › Export › Word document (.docx)… (pdf2docx 0.5.13, MIT) from the working copy; page range, images, tables, columns, open / show afterwards; pages without text: OCR first on a temporary copy or convert anyway; copy-forbidden PDFs blocked, unprotected-output warning; worker process with progress and Cancel, atomic write; batch step "Convert to Word" | 5f7940f |
+| 17 | Pages between tabs: Copy / Cut / Paste (keys, Page menu, right-click), Paste before / after, Paste Pages as New PDF; drag onto a tab (hover switches), the thumbnails, Overview and between compare panes; annotations, internal links and form fields travel (field renames said once), optional bookmarks; paste = one undo step in the destination, cut = one in the source; copy-forbidden sources blocked. Leftovers: Insert / Merge read in the background and grafted in parts (Cancel, one undo step; annotations now kept); page right-click menu; mixed-size crop by margins or proportion; Settings gap colours in the review HTML / PDF | 1e345dd, 52aeaf2, 9506279, 9e10246 |
+| 18 (polish pass) | Insert › Link (page targets with the view on arrival, web addresses; draw, select, move, resize, re-target, delete; journal-safe, probed on 5 files; survives save, extract and the page graft); Extract keeps links between extracted pages; Insert › Text cut; split-button carets get their own room; sentence-case page menu entries | 51f8299, f5db7dc, f415f04, 0fbd55f, 2539a57, 2e1e3c1 |
+| 18b | File › Export from the editor, every entry live: PDF (same writer and password choice as Save As, not the Save target), EPUB 3 (chapters from bookmarks / headings, images, text-less pages as pictures), Markdown (7a headings, paragraphs, lists), HTML (one self-contained file, images inlined), plain text (reading order, page markers); page ranges; worker process with progress and Cancel, atomic write; copy-forbidden sources blocked for the text formats | d0fed9d, 3e6e3fb, 1c7897d, 3e2bea5, 7b28abf |
+| 18c | File › Open Recent (10 most recent editor PDFs, a manual pick list, nothing reopened automatically; missing files greyed; Clear); Annotations panel (dock with Pages / Bookmarks: every annotation, page, type, text; click goes to and selects; live). Fix: progress dialogs deleted when done (a closed, never-shown one popped up later, window-modal, blocking hand-offs: the s12 timeouts since 17) | 0253d33, 17870b1, 510a030, b1acfdd |
+| 19 | Windows installer (Inno Setup 6.7.3, build tool only): Program Files 64-bit, Start-menu + optional desktop shortcut, Apps entry, optional default-PDF-reader registration for the user who ran Setup (unelevated, Windows confirms), launch at the end; uninstall reverses the registration (only this copy's) and keeps user data; version 0.19.0; nothing written next to the exe (self-test check), tested unelevated in a locked scratch install | 79aa04a, 981b911, bca0f16, 4b5c9e5 |
+| 19b | Update checker (GitHub latest-release lookup only; background at startup, toggle in Settings; Help > Check for updates; non-modal bar with notes, Download and install / Skip / Later; SHA-256-verified download, unsaved-work prompt, in-place upgrade with relaunch; source runs never install) + public releases-only repo Crazy8697/Lazarus (README only, no release yet) + build.ps1 -Release (and -TestBuild); -Install removed; version 0.19.1 | efe1ea4, c6164e6, 7331991, 402f446, 2bcdf40, 3fb6488 |
+| 20 | Final shakedown + first public release prep: open source (AGPL-3.0, LICENSE, THIRD-PARTY-NOTICES shipped and in Help > Licenses, license audit), public README with a one-click download, privacy audit + tools/privacy_check.py, -Release syncs the public source (git archive of this folder) and attaches Lazarus-Setup.exe, About box on the DarkRelay banner, Help > Support DarkRelay, 'program' wording, cross-feature combo tests; fixes: Markdown / EPUB dropped repeated body lines, -Release's empty source archive; version 0.20.0 | 5d68bdc, 27b0283, dea6958, b9623a3, 4e93192, fea0844, 156fb43, 8f67773, 5f5946b, 78184a0, 35194a4, 63902e4, 3aed741 |
+
+## Remaining, in order
+
+Nothing scheduled. Publishing v0.20.0 (build.ps1 -Release) waits on the maintainer's go-ahead; the real-world updater path (a published release, a real upgrade through Help > Check for updates with its UAC prompt and unelevated relaunch) is checked with that first release.
+
+Dark mode is already in place (the whole program uses its dark theme).
+
+## Noted, not built
+
+- **Extraction modes "Searchable PDF" and "Rebuilt pages"** (stubs in `modes.py`): Searchable is largely covered by the editor's Document › OCR page (stage 10); Rebuilt pages is not built.
+
+## Cut
+
+Office-to-PDF, cryptographic signatures, PDF/UA tagging, cloud sync.
+Insert › Text (stage 18): redundant with the 9a text box and stage 11 in-place text editing; the placeholder is removed.
+Reopen work (session restore; recent files was built instead, 18c), page tint, read-aloud (decided at stage 19).

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#121a24"/>
+      <stop offset="60%" stop-color="#0a0e14"/>
+      <stop offset="100%" stop-color="#05070a"/>
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#9ff5ff"/>
+      <stop offset="100%" stop-color="#19c2e6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="b1"/>
+      <feGaussianBlur stdDeviation="14" result="b2"/>
+      <feMerge>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- faint ring -->
+  <circle cx="256" cy="256" r="196" fill="none" stroke="#19c2e6" stroke-opacity="0.12" stroke-width="2"/>
+
+  <g filter="url(#glow)" fill="none" stroke-linecap="round">
+    <!-- relay line through the node -->
+    <line x1="96" y1="256" x2="416" y2="256" stroke="#19c2e6" stroke-opacity="0.35" stroke-width="4"/>
+
+    <!-- inner arcs -->
+    <path d="M 214 206 A 70 70 0 0 0 214 306" stroke="#4fdcf5" stroke-width="12"/>
+    <path d="M 298 206 A 70 70 0 0 1 298 306" stroke="#4fdcf5" stroke-width="12"/>
+
+    <!-- outer arcs -->
+    <path d="M 176 160 A 130 130 0 0 0 176 352" stroke="#19c2e6" stroke-width="12" stroke-opacity="0.8"/>
+    <path d="M 336 160 A 130 130 0 0 1 336 352" stroke="#19c2e6" stroke-width="12" stroke-opacity="0.8"/>
+
+    <!-- far arcs -->
+    <path d="M 140 118 A 190 190 0 0 0 140 394" stroke="#19c2e6" stroke-width="8" stroke-opacity="0.4"/>
+    <path d="M 372 118 A 190 190 0 0 1 372 394" stroke="#19c2e6" stroke-width="8" stroke-opacity="0.4"/>
+  </g>
+
+  <!-- core node -->
+  <circle cx="256" cy="256" r="46" fill="url(#core)"/>
+  <circle cx="256" cy="256" r="16" fill="#ffffff" filter="url(#glow)"/>
+</svg>
