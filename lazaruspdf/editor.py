@@ -2,7 +2,7 @@
 
 Everything is editable. Each gap is a run of text whose char format carries
 P_KIND="gap" and its page number. If the run still reads exactly
-"[[FILL IN — p.N]]", the gap is open. Any other text means it is filled.
+"[[FILL IN - p.N]]", the gap is open. Any other text means it is filled.
 The look comes from STYLES only, so changing a colour is a one-line edit."""
 from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (QBrush, QColor, QFont, QImage, QTextBlockFormat, QTextCharFormat,

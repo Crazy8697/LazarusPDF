@@ -376,7 +376,7 @@ class OverviewMode(QObject):
     def _placeholder(self, key, icon, label, what):
         a = QAction(_icon(icon, on=False), label, self.win)
         a.setToolTip(f"<b>{label}</b><br>{what}<br><i>Not implemented yet</i>")
-        a.triggered.connect(lambda: self.status(f"Not implemented yet: {label} — {what}.", 5000))
+        a.triggered.connect(lambda: self.status(f"Not implemented yet: {label}, {what}.", 5000))
         a.setProperty("soon", True)
         self.soon[key] = a
         return a
@@ -412,7 +412,7 @@ class OverviewMode(QObject):
             bar.setAllowedAreas(Qt.TopToolBarArea | Qt.LeftToolBarArea | Qt.RightToolBarArea)
             bar.setIconSize(QSize(20, 20))
             bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-            bar.setToolTip(f"{title} — drag the dotted handle: along a row, up to row 1, or to a side")
+            bar.setToolTip(f"{title}: drag the dotted handle, along a row, up to row 1, or to a side")
             lab = QLabel(f" {title.upper()} ")
             lab.setObjectName("grouplabel")
             bar.addWidget(lab)

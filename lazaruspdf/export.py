@@ -1,7 +1,7 @@
 """Export the edited document: PDF, Word (.docx), EPUB, Markdown, HTML, plain text.
 
-Filled gaps export as plain text. Open gaps keep their highlighted [[FILL IN — p.N]] marker.
-Images go into PDF/DOCX/EPUB/HTML; TXT/MD keep the [[FIGURE — p.N]] marker."""
+Filled gaps export as plain text. Open gaps keep their highlighted [[FILL IN - p.N]] marker.
+Images go into PDF/DOCX/EPUB/HTML; TXT/MD keep the [[FIGURE - p.N]] marker."""
 import html
 import io
 import re

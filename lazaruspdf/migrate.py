@@ -10,7 +10,8 @@ the first start of Lazarus PDF (and right after Setup's upgrade, LazarusPDF.exe 
   .pdf         assoc.migrate_old(): the old registration -> the new names (see assoc.py for the one
                key Windows' default choice may still need).
 
-A source (development) run never migrates the real registry, only an installed one does. Tests use
+A source (development) run never migrates the real registry, only an installed one does, and never
+while LAZARUS_SETTINGS_INI is set (a test run: the registration then moves only inside a sandbox). Tests use
 LAZARUS_SETTINGS_INI (the new store) + LAZARUS_OLD_SETTINGS_INI (an old store as an INI file), and
 LAZARUS_ASSOC_ROOT (a sandbox for the registration). Every step is safe to repeat: run() at every
 start finds nothing to do once it's done. Nothing about the user's files is read or logged."""
@@ -126,7 +127,8 @@ def run():
     try:
         from . import assoc
         reg = assoc.registry()
-        if reg.root is not None or _frozen():
+        # a sandbox (tests), or the real registry only in a real (installed, not test-settings) run
+        if reg.root is not None or (_frozen() and not os.environ.get("LAZARUS_SETTINGS_INI")):
             out["pdf_registration"] = assoc.migrate_old(reg)
             out["forwarders_removed"] = assoc.cleanup_forwarders(reg)
     except Exception as e:

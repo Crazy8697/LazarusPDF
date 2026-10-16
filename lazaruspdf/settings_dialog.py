@@ -57,7 +57,7 @@ class SettingsDialog(QDialog):
 
     def __init__(self, parent, store):
         super().__init__(parent)
-        self.setWindowTitle(f"{APP_NAME} — Settings")
+        self.setWindowTitle("Settings")
         self.setModal(True)
         self.resize(620, 420)
         self.s = store

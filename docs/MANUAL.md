@@ -47,11 +47,11 @@ You can also drop a PDF anywhere on the window. The pop-up closes on its own whe
 - Every bit of text is editable.
 - Open gaps are yellow with red text. F3 / Shift+F3 (or Next gap / Prev gap) selects the next open gap; type to replace it.
 - Clicking into an open gap selects the whole marker.
-- A gap whose text no longer reads `[[FILL IN — p.N]]` counts as filled and turns green with a dotted underline. To change the colours, edit `STYLES` in `lazarus/editor.py`.
+- A gap whose text no longer reads `[[FILL IN - p.N]]` counts as filled and turns green with a dotted underline. To change the colours, edit `STYLES` in `lazarus/editor.py`.
 - **Save** (Ctrl+S) rewrites the four review outputs in place. It never writes copies.
 - **Export ▾** saves PDF, Word (.docx), EPUB, Markdown, HTML or .txt, always from the current edited text. It also makes the two PDF outputs below: **Searchable PDF** and **Rebuilt pages**.
   - Filled gaps export as plain text. Open gaps keep the highlighted marker.
-  - Images go into PDF, DOCX, EPUB and HTML. Markdown and .txt keep `[[FIGURE — p.N]]`.
+  - Images go into PDF, DOCX, EPUB and HTML. Markdown and .txt keep `[[FIGURE - p.N]]`.
   - If any gaps are still open, you're asked to confirm the export first.
   - Page headings are off in exports by default (toggle under Export).
 

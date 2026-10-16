@@ -247,7 +247,7 @@ class ExtractionMode(QObject):
         if not self.save():
             self.paths = old
             return False
-        self.status("Saved to the new folder — further saves go there.", 6000)
+        self.status("Saved to the new folder, further saves go there.", 6000)
         return True
 
     def save(self):
@@ -261,7 +261,7 @@ class ExtractionMode(QObject):
             return False
         self.editor.mark_saved()
         self.win.update_title()
-        self.status("Saved — review outputs updated in place.", 6000)
+        self.status("Saved, review outputs updated in place.", 6000)
         return True
 
     def do_export(self, fmt):

@@ -103,7 +103,7 @@ class BookmarksPanel(QObject):
                 dest = e[3] if len(e) > 3 and isinstance(e[3], dict) else {}
                 del parents[lvl:]
                 parent = parents[-1] if parents else self.tree.invisibleRootItem()
-                it = QTreeWidgetItem(parent, [str(title), str(page) if page and page > 0 else "—"])
+                it = QTreeWidgetItem(parent, [str(title), str(page) if page and page > 0 else "-"])
                 it.setFlags(it.flags() | Qt.ItemIsEditable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled)
                 it.setData(0, PAGE, page)
                 it.setData(0, DEST, {k: v for k, v in dest.items() if k in ("to", "color", "bold", "italic",

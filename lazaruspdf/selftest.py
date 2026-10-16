@@ -29,6 +29,22 @@ def run(report_path, pdf, work):
                 out[str(q.relative_to(app_dir))] = (st.st_size, st.st_mtime_ns)
         return out
     app_before = _app_snapshot()
+
+    def _real_registration():
+        """The user's REAL .pdf registration keys (old and new names): no check, and no program the
+        checks start, may change them (stage 22: a child run once migrated them)."""
+        from . import assoc as A
+        reg = A.Registry()
+        out = {}
+        for p in (r"Software\Classes\LazarusPDF.PDF", r"Software\Classes\Lazarus.PDF", r"Software\LazarusPDF",
+                  r"Software\Lazarus\Capabilities", r"Software\Classes\Applications\LazarusPDF.exe",
+                  r"Software\Classes\Applications\Lazarus.exe"):
+            out[p] = reg.dump(p) if reg.exists(p) else None
+        out["RegisteredApplications"] = [reg.get(r"Software\RegisteredApplications", n) for n in ("LazarusPDF", "Lazarus")]
+        out["OpenWithProgids"] = [reg.has(r"Software\Classes\.pdf\OpenWithProgids", n) for n in ("LazarusPDF.PDF", "Lazarus.PDF")]
+        out["UserChoice"] = A.current_default(reg)
+        return out
+    reg_before = _real_registration()
     c = r["checks"]
 
     def check(name, fn):
@@ -138,7 +154,7 @@ def run(report_path, pdf, work):
             wait(400)
             w.grab().save(str(work / f"mode_{key}.png"))
             out["modes"][key] = {"central": type(w.stack.currentWidget()).__name__,
-                                 "title": w.windowTitle().split(" — ")[-1]}
+                                 "title": w.windowTitle()}
         # edit pipeline: select -> highlight -> undo -> redo -> save as; originals protected
         import hashlib
         src_hash = hashlib.sha256(Path(pdf).read_bytes()).hexdigest()
@@ -6462,6 +6478,63 @@ def run(report_path, pdf, work):
         return out
     check("s22_rename_and_migration", s22_rename_and_migration)
 
+    def s221_window_titles():
+        """0.22.1: the main window's title is exactly "Lazarus PDF" in every mode, with a PDF open and with
+        unsaved edits (PDF and extraction); no window title anywhere carries an em dash or the program's
+        name twice; Qt never appends the name (no application display name is set at start-up)."""
+        import pymupdf
+        from PySide6.QtWidgets import QWidget
+        from . import APP_NAME, gui as G
+        from .settings_dialog import SettingsDialog
+        tw = work / "s221"
+        tw.mkdir(exist_ok=True)
+        src = tw / "titles.pdf"
+        d = pymupdf.open()
+        for i in range(2):
+            d.new_page().insert_text((72, 100), f"Synthetic title test page {i + 1} with enough words to extract.")
+        d.save(src)
+        d.close()
+        out = {}
+        w = G.Main()
+        titles = {}
+
+        def snap(tag):
+            for key in ("overview", "editor", "extract"):
+                w.set_mode(key)
+                wait(50)
+                titles[f"{tag}/{key}"] = w.windowTitle()
+        snap("empty")
+        w.editor_mode.open_pdf(str(src))
+        wait(200)
+        snap("pdf_open")
+        em = w.editor_mode
+        em.thumbs.clearSelection()
+        em.thumbs.item(1).setSelected(True)
+        w.pageops.delete_selected(confirm=False)        # an unsaved PDF edit
+        pages, paths, _ = modes.run(modes.EXTRACT, str(src), str(tw / "out"))
+        w.importer.last_src = str(src)
+        w.on_imported(pages, paths)
+        w.text_mode.editor.textCursor().insertText("x")  # an unsaved extraction edit
+        wait(100)
+        out["edits_really_unsaved"] = em.any_dirty() and w.text_mode.is_dirty()
+        snap("unsaved")
+        out["main_title_always_exact"] = all(t == APP_NAME for t in titles.values()) and len(titles) == 9
+        out["titles_seen"] = sorted(set(titles.values()))
+        dialogs = [SettingsDialog(w, w.settings), w.importer, w.show_about(show=False), w.show_licenses(show=False)]
+        tops = [x.windowTitle() for x in dialogs] + [x.windowTitle() for x in w.findChildren(QWidget) if x.isWindow()]
+        out["no_dash_or_double_name_in_any_title"] = all("—" not in t and t.count(APP_NAME) <= 1 for t in tops)
+        out["import_title"] = w.importer.windowTitle() == "Import PDF"
+        out["settings_title"] = dialogs[0].windowTitle() == "Settings"
+        # (the compiled code's names: an installed copy has no source to read)
+        out["no_display_name_set"] = "setApplicationDisplayName" not in G.run.__code__.co_names
+        for x in dialogs[:1] + dialogs[2:]:
+            x.close()
+        w.text_mode.editor.document().setModified(False)
+        w.close()                                       # (the unsaved-PDF question is answered Discard)
+        out["ok"] = all(v for k, v in out.items() if k != "titles_seen")
+        return out
+    check("s221_window_titles", s221_window_titles)
+
     def install_folder_untouched():
         """Nothing was created, changed or removed in the app's own folder by any check above: an
         installed copy lives in read-only Program Files (every write goes to per-user places)."""
@@ -6472,6 +6545,12 @@ def run(report_path, pdf, work):
         return {"ok": not (added or changed or removed), "files": len(after), "added": len(added),
                 "changed": len(changed), "removed": len(removed)}
     check("install_folder_untouched", install_folder_untouched)
+
+    def real_registration_untouched():
+        """Stage 22: the user's real .pdf registration (and Windows' default choice) is exactly as
+        before every check above, child launches included: tests only ever use a sandbox."""
+        return {"ok": _real_registration() == reg_before}
+    check("real_registration_untouched", real_registration_untouched)
 
     # overall OK only if nothing raised AND every check reported ok
     r["ok"] = not r["errors"] and all(isinstance(v, dict) and v.get("ok") for v in c.values())

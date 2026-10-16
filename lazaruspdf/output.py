@@ -13,11 +13,11 @@ from .extract import GAP, Figure, Filled
 
 
 def gap_marker(p):
-    return f"[[FILL IN — p.{p}]]"
+    return f"[[FILL IN - p.{p}]]"
 
 
 def fig_marker(p):
-    return f"[[FIGURE — p.{p}]]"
+    return f"[[FIGURE - p.{p}]]"
 
 
 def output_paths(src, out_dir):
@@ -128,7 +128,7 @@ def write_gaps(pages, path):
                                 for x in flat[i + 1:])[:60].strip()
                 entries.append((pr.number, before, after, s))
     open_n = sum(1 for e in entries if e[3] is GAP)
-    out = [f"Lazarus PDF gap list — {open_n} open, {len(entries) - open_n} filled", ""]
+    out = [f"Lazarus PDF gap list: {open_n} open, {len(entries) - open_n} filled", ""]
     for n, (p, before, after, s) in enumerate(entries, 1):
         state = "OPEN" if s is GAP else f"filled: {s.text}"
         out.append(f"{n:4d}. p.{p}  [{state}]")
@@ -248,7 +248,7 @@ def render_html(pages, title, clean=False, page_headings=True):
                 f"<body><main>{''.join(body)}</main></body></html>")
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{t} — review</title><style>{_CSS}{_gap_css()}</style></head><body>
+<title>{t}: review</title><style>{_CSS}{_gap_css()}</style></head><body>
 <header><b>Lazarus PDF review</b><span>{len(pages)} page(s) · {gaps} open gap(s) · {filled} filled · {figs} figure(s)</span>
 <span><button onclick="go(-1)">◀ Prev gap</button> <button onclick="go(1)">Next gap ▶</button> <span id="pos"></span></span>
 <span style="color:var(--muted)">Purple bar = OCR text · green = filled gap</span></header>

@@ -979,7 +979,7 @@ class PdfEditorMode(QObject):
         a = QAction(_icon(icon, on=False), label, self.win)
         a.setToolTip(f"<b>{label}</b><br>{what}<br><i>Not implemented yet</i>")
         a.setStatusTip(f"{label}: {what} (not implemented yet)")
-        a.triggered.connect(lambda: self.status(f"Not implemented yet: {label} — {what}.", 5000))
+        a.triggered.connect(lambda: self.status(f"Not implemented yet: {label}, {what}.", 5000))
         a.setProperty("soon", True)
         self.soon[key] = a
         return a
@@ -1057,7 +1057,7 @@ class PdfEditorMode(QObject):
         self.act_select.setToolTip("Select (pointer)")
         self.act_hand = QAction(_icon("hand-back-right-outline"), "Pan", win, checkable=True,
                                 triggered=lambda: self._set_pan(True))
-        self.act_hand.setToolTip("Pan — drag the pages around")
+        self.act_hand.setToolTip("Pan: drag the pages around")
         for a in (self.act_open, self.act_zin, self.act_zout, self.act_fit, self.act_prev, self.act_next):
             a.setToolTip(a.text().replace("…", ""))
         # tabs (one per open PDF) and the compare view
@@ -1153,7 +1153,7 @@ class PdfEditorMode(QObject):
             bar.setAllowedAreas(Qt.TopToolBarArea | Qt.LeftToolBarArea | Qt.RightToolBarArea)
             bar.setIconSize(QSize(20, 20))
             bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-            bar.setToolTip(f"{group} tools — drag the dotted handle: along a row, up to row 1, or to a side")
+            bar.setToolTip(f"{group} tools: drag the dotted handle, along a row, up to row 1, or to a side")
             lab = QLabel(f" {group.upper()} ")
             lab.setObjectName("grouplabel")
             bar.addWidget(lab)
@@ -2050,7 +2050,7 @@ class PdfEditorMode(QObject):
         if n < 0:
             self.status("Couldn't read the text on this page for selection.", 5000)
         elif n:
-            self.status(f"{n} characters selected — Ctrl+C copies; Edit › Highlight selection (pipeline test).", 4000)
+            self.status(f"{n} characters selected, Ctrl+C copies; Edit › Highlight selection (pipeline test).", 4000)
 
     def _thumb_row(self, r):
         if r >= 0:

@@ -79,7 +79,7 @@ class ImportDialog(QDialog):
 
     def __init__(self, parent, settings):
         super().__init__(parent)
-        self.setWindowTitle(f"{APP_NAME} — Import PDF")
+        self.setWindowTitle("Import PDF")
         self.setModal(True)
         self.setAcceptDrops(True)
         self.resize(600, 380)
@@ -173,7 +173,7 @@ class ImportDialog(QDialog):
 
     def set_pdf(self, path):
         self.pdf_edit.setText(path)
-        self.drop.setText("PDF loaded — press Start")
+        self.drop.setText("PDF loaded, press Start")
         self.bar.setValue(0)
         self.gaps.setText("Gaps: 0")
         self.figs.setText("Figures: 0")
@@ -270,7 +270,7 @@ class ImportDialog(QDialog):
         self.bar.setValue(self.bar.maximum())
         self.gaps.setText(f"Gaps: {gaps}")
         self.figs.setText(f"Figures: {figs}")
-        self.status.setText("Done — loaded into the editor.")
+        self.status.setText("Done, loaded into the editor.")
         self.open_btn.setEnabled(True)
         self.folder_btn.setEnabled(True)
         self.imported.emit(pages, paths)
@@ -516,12 +516,9 @@ class Main(QMainWindow):
         self.update_title()
 
     def update_title(self):
-        t = f"{APP_NAME} — {self.modes[self.mode].title}" if self.mode else APP_NAME
-        if self.editor_mode.any_dirty():
-            t += " • unsaved PDF edits"
-        if self.text_mode.is_dirty():
-            t += " • unsaved extraction edits"
-        self.setWindowTitle(t)
+        # always just the program's name (0.22.1): the mode buttons, tabs and the asterisk on a
+        # tab already show the mode, the file and unsaved work
+        self.setWindowTitle(APP_NAME)
 
     # ---------- layout ----------
     def _regroup(self):
@@ -685,7 +682,7 @@ def run(paths=None):
     app = QApplication(sys.argv)
     from . import APP_ID, migrate
     app.setApplicationName(APP_ID)          # identifier: %APPDATA%\LazarusPDF (saved signatures)
-    app.setApplicationDisplayName(APP_NAME)
+    # (no setApplicationDisplayName: Qt would append " - <name>" to every window title)
     migrate.run()                           # stage 22: a Lazarus 0.21.0 user's data, once
     # single instance: this one listens for later launches (double-clicked PDFs open as tabs here)
     from .instance import InstanceServer, OpenQueue, claim, pdf_args, wait_for_instance

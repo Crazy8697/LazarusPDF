@@ -143,7 +143,7 @@ def open_pdf(src, ask=None):
 def ask_password(parent, attempt, name=""):
     """Masked password prompt. Returns the password, or None if cancelled."""
     from PySide6.QtWidgets import QInputDialog, QLineEdit
-    title = f"Password — {name}" if name else "Password"
+    title = f"Password for {name}" if name else "Password"
     text = ("Wrong password. Try again:" if attempt else
             "This PDF is password-protected.\nEnter its password to open it:")
     pw, ok = QInputDialog.getText(parent, title, text, QLineEdit.Password)
