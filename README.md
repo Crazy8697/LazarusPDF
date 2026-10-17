@@ -16,7 +16,7 @@ Read, mark up, edit, rearrange, fill in, protect and export PDFs. Everything sta
 </p>
 
 <!-- dl-info -->
-<p align="center"><sub>Windows 10 / 11, 64-bit &nbsp;&middot;&nbsp; version 0.22.2 &nbsp;&middot;&nbsp; 104 MB &nbsp;&middot;&nbsp; <a href="https://github.com/Crazy8697/LazarusPDF/releases">all releases</a></sub></p>
+<p align="center"><sub>Windows 10 / 11, 64-bit &nbsp;&middot;&nbsp; version 1.0.0 &nbsp;&middot;&nbsp; 103 MB &nbsp;&middot;&nbsp; <a href="https://github.com/Crazy8697/LazarusPDF/releases">all releases</a></sub></p>
 <!-- /dl-info -->
 
 <p align="center"><sub>The installer isn't code-signed, so Windows may show "Windows protected your PC": click <b>More info</b>, then <b>Run anyway</b>.</sub></p>

@@ -45,6 +45,27 @@ def run(report_path, pdf, work):
         out["UserChoice"] = A.current_default(reg)
         return out
     reg_before = _real_registration()
+
+    def _real_fonts():
+        """The user's REAL fonts folder (file names, sizes, times) and HKCU font registrations: read only.
+        No check, and nothing the program does during a run, may change them (stage 22.3)."""
+        import winreg
+        d = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "Windows" / "Fonts"
+        files = sorted((p.name, p.stat().st_size, p.stat().st_mtime_ns) for p in d.iterdir()) if d.is_dir() else []
+        vals = []
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows NT\CurrentVersion\Fonts") as k:
+                i = 0
+                while True:
+                    try:
+                        vals.append(winreg.EnumValue(k, i)[:2])
+                    except OSError:
+                        break
+                    i += 1
+        except OSError:
+            pass
+        return files, sorted(vals)
+    fonts_before = _real_fonts()
     c = r["checks"]
 
     def check(name, fn):
@@ -87,8 +108,8 @@ def run(report_path, pdf, work):
     check("tesseract", tesseract)
 
     def qtawesome():
-        import qtawesome as qta
-        icon = qta.icon("mdi6.marker")
+        from .icons import icon as qicon
+        icon = qicon("mdi6.marker")          # the private font set (stage 22.3)
         return {"ok": not icon.isNull() and not icon.pixmap(24, 24).isNull()}
     check("qtawesome_fonts", qtawesome)
 
@@ -6535,6 +6556,106 @@ def run(report_path, pdf, work):
         return out
     check("s221_window_titles", s221_window_titles)
 
+    def s223_icon_fonts():
+        """Stage 22.3: the icons come from a PRIVATE font set (Material Design Icons 6 only, loaded from an
+        explicit folder), QtAwesome's shared instance (which copies its fonts into the user fonts folder and
+        registers them) is never created, and the cleanup of what older versions installed removes only
+        byte-for-byte QtAwesome copies: a synthetic font with the same name and any other font survive, a
+        locked file stays (its registry value goes) and is removed on the next run. Sandbox only."""
+        import hashlib
+        import shutil
+        import uuid
+        import winreg
+        import qtawesome
+        from PySide6.QtCore import QSettings
+        from . import fontclean as F, icons as I
+        out = {}
+        ic = I.icon("mdi6.marker", color="#e6e6e6")
+        out["private_font_loads"] = (I.iconic().fontname.get("mdi6") == "Material Design Icons"
+                                     and not ic.isNull() and not ic.pixmap(24, 24).toImage().isNull()
+                                     and list(I.iconic().fontname) == ["mdi6"])
+        out["shared_instance_never_created"] = qtawesome._resource.get("iconic") is None
+        out["font_folder_is_explicit"] = os.path.isfile(os.path.join(I.fonts_dir(), I.MDI_TTF))
+        src = Path(I.fonts_dir())
+        here = [n for n in F.KNOWN if (src / n).exists()]                  # (installed: only the mdi6 pair)
+        out["known_hashes_match_this_qtawesome"] = (I.MDI_TTF in here and len(F.KNOWN) == 24 and all(
+            hashlib.sha256((src / n).read_bytes()).hexdigest() == F.KNOWN[n] for n in here))
+        # --- the cleanup, in a sandbox: a fonts folder + a key below HKCU, SYNTHETIC files only; the hash
+        # table is swapped for the synthetic files' hashes during the test (the same matching code runs) ---
+        sb = work / "s223-fonts"
+        shutil.rmtree(sb, ignore_errors=True)
+        sb.mkdir()
+        names = ["materialdesignicons6-webfont-6.9.96.ttf", "materialdesignicons6-webfont-charmap-6.9.96.json",
+                 "fontawesome6-solid-webfont-6.7.2.ttf", "phosphor-1.3.0.ttf", "remixicon-2.5.0.ttf"]
+        fake = {n: (b"synthetic QtAwesome copy " + n.encode()) * 40 for n in names}
+        for n, v in fake.items():
+            (sb / n).write_bytes(v)
+        n_copied = len(names)
+        (sb / "remixicon-2.5.0.ttf").write_bytes(b"not QtAwesome's remixicon, same name" * 50)   # must survive
+        (sb / "SomeOtherFont.ttf").write_bytes(b"an unrelated user font" * 50)                  # must survive
+        real_known = F.KNOWN
+        F.KNOWN = {n: hashlib.sha256(v).hexdigest() for n, v in fake.items()}
+        key = rf"Software\LazarusSelfTest\fonts-{uuid.uuid4().hex[:8]}"
+        regs = {"Material Design Icons (TrueType)": "materialdesignicons6-webfont-6.9.96.ttf",
+                "Font Awesome 6 Free Solid (TrueType)": "fontawesome6-solid-webfont-6.7.2.ttf",
+                "remixicon (TrueType)": "remixicon-2.5.0.ttf",
+                "Some Other Font (TrueType)": "SomeOtherFont.ttf",
+                "Elsewhere (TrueType)": r"C:\SomewhereElse\phosphor-1.3.0.ttf"}
+        try:
+            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, key) as k:
+                for name, data in regs.items():
+                    winreg.SetValueEx(k, name, 0, winreg.REG_SZ, data)
+            locked = sb / "fontawesome6-solid-webfont-6.7.2.ttf"
+            ini = work / "s223-fonts.ini"
+            if ini.exists():
+                ini.unlink()
+            st = QSettings(str(ini), QSettings.IniFormat)
+            os.environ["LAZARUS_FONTCLEAN_DIR"], os.environ["LAZARUS_FONTCLEAN_REG"] = str(sb), key
+            try:
+                with open(locked, "rb"):                      # held open: Windows refuses to delete it
+                    r1 = F.run(st)
+                left_vals = {n: d for n, d, _k in F._values(key)}
+                out["cleanup_first_run"] = (
+                    sorted(r1["left"]) == [locked.name]
+                    and len(r1["files_removed"]) == n_copied - 2          # all matching copies but the locked one
+                    and "remixicon-2.5.0.ttf" not in r1["files_removed"]
+                    and set(left_vals) == {"remixicon (TrueType)", "Some Other Font (TrueType)", "Elsewhere (TrueType)"}
+                    and not st.value(F.DONE_KEY, False, type=bool))
+                out["same_name_other_font_survives"] = (sb / "remixicon-2.5.0.ttf").read_bytes().startswith(b"not QtAwesome")
+                out["other_font_survives"] = (sb / "SomeOtherFont.ttf").exists()
+                out["locked_file_left_its_value_removed"] = locked.exists() and "Font Awesome 6 Free Solid (TrueType)" not in left_vals
+                r2 = F.run(st)                                # the next start: the file is free now
+                out["locked_file_removed_next_run"] = (r2 is not None and r2["files_removed"] == [locked.name]
+                                                       and not locked.exists() and st.value(F.DONE_KEY, False, type=bool))
+                out["done_is_recorded"] = F.run(st) is None
+                out["only_the_expected_files_left"] = sorted(p.name for p in sb.iterdir()) == ["SomeOtherFont.ttf",
+                                                                                              "remixicon-2.5.0.ttf"]
+            finally:
+                os.environ.pop("LAZARUS_FONTCLEAN_DIR", None)
+                os.environ.pop("LAZARUS_FONTCLEAN_REG", None)
+        finally:
+            F.KNOWN = real_known
+            A_reg = __import__("lazaruspdf.assoc", fromlist=["x"]).Registry()
+            A_reg.delete_tree(key)
+            A_reg.delete_if_empty(r"Software\LazarusSelfTest")
+        # every test hook alone keeps the real folder and registry out of reach (a test's uninstaller
+        # once ran the real cleanup: it had only LAZARUS_ASSOC_ROOT set)
+        saved = {v: os.environ.pop(v, None) for v in F.TEST_HOOKS}
+        try:
+            alone = []
+            for v in F.TEST_HOOKS:
+                os.environ[v] = "x"
+                alone.append(F.places() is None)
+                os.environ.pop(v)
+        finally:
+            for v, val in saved.items():
+                if val is not None:
+                    os.environ[v] = val
+        out["no_real_run_from_a_test"] = all(alone) and F.places() is None
+        out["ok"] = all(out.values())
+        return out
+    check("s223_icon_fonts", s223_icon_fonts)
+
     def install_folder_untouched():
         """Nothing was created, changed or removed in the app's own folder by any check above: an
         installed copy lives in read-only Program Files (every write goes to per-user places)."""
@@ -6551,6 +6672,12 @@ def run(report_path, pdf, work):
         before every check above, child launches included: tests only ever use a sandbox."""
         return {"ok": _real_registration() == reg_before}
     check("real_registration_untouched", real_registration_untouched)
+
+    def real_fonts_untouched():
+        """Stage 22.3: the user's real fonts folder and HKCU font registrations are exactly as before every
+        check above: nothing in a run installs, registers or removes a font outside a sandbox."""
+        return {"ok": _real_fonts() == fonts_before}
+    check("real_fonts_untouched", real_fonts_untouched)
 
     # overall OK only if nothing raised AND every check reported ok
     r["ok"] = not r["errors"] and all(isinstance(v, dict) and v.get("ok") for v in c.values())

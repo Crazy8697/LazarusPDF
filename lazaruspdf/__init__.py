@@ -1,4 +1,4 @@
-__version__ = "0.22.2"
+__version__ = "1.0.0"
 APP_NAME = "Lazarus PDF"         # the name people see (stage 22; "Lazarus" until 0.21.0)
 APP_ID = "LazarusPDF"            # the identifier: install folder, exe, settings key, registry, repo
 EXE_NAME = APP_ID + ".exe"

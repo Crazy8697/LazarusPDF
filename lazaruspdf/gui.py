@@ -684,6 +684,8 @@ def run(paths=None):
     app.setApplicationName(APP_ID)          # identifier: %APPDATA%\LazarusPDF (saved signatures)
     # (no setApplicationDisplayName: Qt would append " - <name>" to every window title)
     migrate.run()                           # stage 22: a Lazarus 0.21.0 user's data, once
+    from . import fontclean
+    fontclean.run(S.store())                # 22.3: icon fonts older versions put in the user fonts folder
     # single instance: this one listens for later launches (double-clicked PDFs open as tabs here)
     from .instance import InstanceServer, OpenQueue, claim, pdf_args, wait_for_instance
     paths = pdf_args(sys.argv[1:]) if paths is None else paths

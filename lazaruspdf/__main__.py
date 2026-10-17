@@ -14,6 +14,10 @@ def main():
         from . import migrate                 # Setup runs this after an upgrade (stage 22); no window
         migrate.run()
         return 0
+    if len(sys.argv) == 2 and sys.argv[1] == "--clean-fonts":
+        from . import fontclean, settings      # the uninstaller (stage 22.3); no window, never fails
+        fontclean.run(settings.store(), force=True)
+        return 0
     if len(sys.argv) >= 2 and sys.argv[1] == "--cli":
         from . import modes, tess
         tess.configure()

@@ -157,6 +157,14 @@ try {
         & $py -m PyInstaller --noconfirm --clean lazaruspdf.spec
         if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed ($LASTEXITCODE)" }
     }
+    # Only the icon font THIRD-PARTY-NOTICES.txt covers may ship: Material Design Icons 6 (stage 22.3).
+    $fonts = Get-ChildItem (Join-Path $dist "_internal\qtawesome\fonts") -File -ErrorAction SilentlyContinue |
+             Where-Object { $_.Name -notlike "materialdesignicons6-webfont*" }
+    if ($fonts) { throw "Refusing: icon fonts the notices don't cover are in the build: $($fonts.Name -join ', ')" }
+    $other = Get-ChildItem $dist -Recurse -File -Include *.ttf,*.otf,*.woff,*.woff2 -ErrorAction SilentlyContinue |
+             Where-Object { $_.FullName -notlike "*\qtawesome\fonts\materialdesignicons6-webfont*" -and
+                            $_.FullName -notlike "*\tesseract\tessdata\pdf.ttf" }
+    if ($other) { throw "Refusing: font files the notices don't cover are in the build: $($other.Name -join ', ')" }
     $mb = [math]::Round((Get-ChildItem $dist -Recurse -File | Measure-Object Length -Sum).Sum / 1MB, 1)
     Write-Host "Built: $dist\LazarusPDF.exe  ($mb MB)"
 

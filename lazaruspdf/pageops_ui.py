@@ -7,13 +7,13 @@ working copy via pageops (one undoable step each). Afterwards the editor rebuild
 Overview refreshes with the resulting pages selected."""
 from pathlib import Path
 
-import qtawesome as qta
 from PySide6.QtCore import QObject, QPoint, QTimer
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QInputDialog,
                                QMenu, QMessageBox, QRadioButton, QSpinBox, QToolButton, QVBoxLayout)
 
 from . import APP_NAME, locked, pageops as P, protect
+from .icons import icon as qicon
 from .pdfeditor import ON, TOOLS
 
 TIPS = {
@@ -89,7 +89,7 @@ class PageOpsController(QObject):
                 # never pass triggered(bool checked) through: it would land in an optional
                 # parameter (e.g. delete_selected(confirm=False) skipping the confirmation)
                 a.triggered.connect(lambda _=False, f=fn: f())
-                a.setIcon(qta.icon("mdi6." + icons[key], color=ON))
+                a.setIcon(qicon("mdi6." + icons[key], color=ON))
                 a.setProperty("soon", False)
                 a.setToolTip(f"<b>{a.text()}</b><br>{TIPS[key]}")
                 a.setStatusTip(TIPS[key])

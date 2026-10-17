@@ -47,7 +47,8 @@ OTHER = [
     ("Qt (Qt6Core, Qt6Gui, Qt6Widgets, Qt6Network, plugins)", "6.12", "LGPL-3.0-only (also GPL-2.0 / GPL-3.0)",
      "Source: https://download.qt.io/official_releases/qt/ ; third-party code inside Qt: "
      "https://doc.qt.io/qt-6/licenses-used-in-qt.html", "lgpl-3.0.txt"),
-    ("Tesseract OCR (tesseract.exe, libtesseract)", "5.4.0", "Apache-2.0", "https://github.com/tesseract-ocr/tesseract",
+    ("Tesseract OCR (tesseract.exe, libtesseract; tessdata/pdf.ttf, its glyphless font for PDF output)", "5.4.0",
+     "Apache-2.0", "https://github.com/tesseract-ocr/tesseract",
      "apache-2.0.txt"),
     ("tessdata eng, osd", "", "Apache-2.0", "https://github.com/tesseract-ocr/tessdata_fast", "apache-2.0.txt"),
     ("Leptonica", "1.84.1", "BSD-2-Clause (Leptonica license)", "http://www.leptonica.org", None),
@@ -72,16 +73,12 @@ OTHER = [
     ("winpthreads", "", "MIT AND ZPL-2.1", "https://www.mingw-w64.org", None),
     ("Zstandard (libzstd)", "", "BSD-3-Clause", "https://facebook.github.io/zstd/", None),
     ("zlib", "1.3", "Zlib", "https://zlib.net", None),
-    ("Material Design Icons font (used for Lazarus PDF's icons; QtAwesome)", "6.9.96", "Apache-2.0",
-     "https://pictogrammers.com/library/mdi/", "apache-2.0.txt"),
-    ("Font Awesome fonts (bundled with QtAwesome)", "5.15.4 / 6.7.2", "SIL OFL 1.1 (fonts)", "https://fontawesome.com",
-     "ofl-1.1.txt"),
-    ("Elusive Icons font (bundled with QtAwesome)", "2.0", "SIL OFL 1.1", "https://github.com/dovy/elusive-icons",
-     "ofl-1.1.txt"),
-    ("Phosphor icons font (bundled with QtAwesome)", "1.3.0", "MIT", "https://phosphoricons.com", None),
-    ("Remix Icon font (bundled with QtAwesome)", "2.5.0", "Apache-2.0", "https://remixicon.com", "apache-2.0.txt"),
-    ("Codicons font (bundled with QtAwesome)", "0.0.36", "CC-BY-4.0", "https://github.com/microsoft/vscode-codicons",
-     "cc-by-4.0.txt"),
+    # the only icon font that ships (stage 22.3): materialdesignicons6-webfont-6.9.96.ttf from QtAwesome 1.4.2,
+    # family "Material Design Icons"; build.ps1 refuses a build with any other icon font
+    ("Material Design Icons font (materialdesignicons6-webfont, family \"Material Design Icons\"; "
+     "Lazarus PDF's icons, via QtAwesome)", "6.9.96",
+     "Pictogrammers Free License: fonts and icons Apache-2.0", "https://pictogrammers.com/library/mdi/",
+     "materialdesignicons.txt"),
 ]
 
 

@@ -109,6 +109,8 @@ Filename: "{app}\{#ExeName}"; Check: ShouldRelaunch; Flags: nowait runasoriginal
 [UninstallRun]
 ; reverse the .pdf registration, exactly as Settings > Remove, and only if it points at this install
 Filename: "{app}\{#ExeName}"; Parameters: "--unregister-default"; RunOnceId: "UnregisterPdf"; Flags: runhidden waituntilterminated
+; remove the icon fonts older versions copied into the user fonts folder (only QtAwesome's own, byte for byte)
+Filename: "{app}\{#ExeName}"; Parameters: "--clean-fonts"; RunOnceId: "CleanIconFonts"; Flags: runhidden waituntilterminated
 
 [Code]
 var

@@ -37,13 +37,25 @@ a = Analysis(
            ("lazaruspdf/assets/darkrelay-banner.jpg", "lazaruspdf/assets"),     # the About box (stage 20)
            ("LICENSE", "."), ("THIRD-PARTY-NOTICES.txt", ".")]          # Help > Licenses
           + collect_data_files("docx")          # default.docx template etc.
-          + collect_data_files("qtawesome"),    # icon fonts for the PDF Editor
+          # only the icon font Lazarus PDF uses (Material Design Icons 6, lazaruspdf/icons.py)
+          + collect_data_files("qtawesome", includes=["fonts/materialdesignicons6-webfont-6.9.96.ttf",
+                                                       "fonts/materialdesignicons6-webfont-charmap-6.9.96.json"]),
     hiddenimports=["ebooklib.epub", "lxml.etree",
                    "comtypes", "comtypes.client", "comtypes.client.dynamic", "comtypes.automation",   # WIA (stage 15)
                    "pdf2docx", "fitz", "fontTools", "fontTools.ttLib"],                                # Word export (16)
     excludes=QT_EXCLUDE + ["tkinter", "matplotlib", "IPython", "pytest"],
     noarchive=False,
 )
+
+# PyInstaller's own QtAwesome hook collects every font QtAwesome bundles, whatever the datas above ask
+# for. Only Material Design Icons 6 is used and covered by THIRD-PARTY-NOTICES.txt, so the rest are
+# dropped here (build.ps1 refuses a build that ships any other icon font). Stage 22.3.
+KEEP_FONT = "materialdesignicons6-webfont"
+a.datas = [d for d in a.datas
+           if not d[0].replace("\\", "/").startswith("qtawesome/fonts/") or KEEP_FONT in d[0]]
+print("LazarusPDF spec: QtAwesome fonts kept:",
+      ", ".join(sorted(Path(d[0]).name for d in a.datas
+                       if d[0].replace("\\", "/").startswith("qtawesome/fonts/"))))
 
 # Binaries pulled in by Qt plugins / OpenCV that nothing in Lazarus PDF loads.
 DROP = ("opencv_videoio_ffmpeg",                 # OpenCV video I/O (29 MB)

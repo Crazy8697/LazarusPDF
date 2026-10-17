@@ -8,7 +8,6 @@ import time
 from pathlib import Path
 
 import pymupdf
-import qtawesome as qta
 from PySide6.QtCore import QObject, QPoint, QPointF, QRectF, QSize, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QImage, QKeySequence, QPainter, QPen,
                            QPixmap, QTransform)
@@ -19,6 +18,7 @@ from PySide6.QtWidgets import (QComboBox, QDockWidget, QFileDialog, QFrame, QGra
                                QToolBar, QToolButton, QVBoxLayout, QWidget)
 
 from . import APP_NAME, export
+from .icons import icon as qicon
 
 ON = "#e6e6e6"       # icon colour for working controls
 RENDER_BUDGET = 0.04  # s of page/thumbnail rendering per event-loop turn (heavy pages: one per turn)
@@ -92,7 +92,7 @@ THUMB_W = 116
 
 
 def _icon(name, on=True):
-    return qta.icon("mdi6." + name, color=ON if on else SOON)
+    return qicon("mdi6." + name, color=ON if on else SOON)
 
 
 def _qimage(pix):
